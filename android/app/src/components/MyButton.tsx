@@ -1,12 +1,13 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React, { FC } from 'react'
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import React, { FC } from 'react';
 
 
 interface Props {
+    onPress: () => void;
     title: string
 }
 
-const MyButton : FC<Props> = ({title, onPress}) => {
+const MyButton : FC<Props> = ({onPress, title}) => {
   return (
     <TouchableOpacity onPress={onPress} style={styles.container}>
         <Text style={styles.title}>{title}</Text>

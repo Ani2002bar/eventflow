@@ -8,32 +8,71 @@ import {
   Alert,
 } from 'react-native';
 import React, { useState } from 'react';
+import { NavigationProp } from '@react-navigation/native';
 import MyButton from '../components/MyButton';
 import MyTextInput from '../components/MyTextInput';
 import SocialMedia from '../components/SocialMedia';
 import auth from '@react-native-firebase/auth';
 
-const SignUpScreen = ({navigation}) => {
+// Define navigation types
+type RootStackParamList = {
+  Login: undefined;
+  SignUp: undefined;
+};
 
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+type SignUpScreenNavigationProp = NavigationProp<RootStackParamList, 'SignUp'>;
 
+interface Props {
+  navigation: SignUpScreenNavigationProp;
+}
+
+const SignUpScreen: React.FC<Props> = ({ navigation }) => {
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
 
   const signUpTestFn = () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
     auth()
       .createUserWithEmailAndPassword(email, password)
       .then(() => {
-        Alert.alert('User Created with those credentials Please Login');
-        navigation.navigate("Login")
+        Alert.alert('Success', 'User Created with those credentials Please Login');
+        navigation.navigate("Login");
       })
-      .catch(err => {
-        console.log(err.nativeErrorMessage);
-        Alert.alert(err.nativeErrorMessage)
+      .catch(error => {
+        let errorMessage = 'An error occurred during sign up';
+        
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorMessage = 'That email address is already in use!';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'That email address is invalid!';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = 'Email/password accounts are not enabled. Please enable them in the Firebase Console.';
+            break;
+          case 'auth/weak-password':
+            errorMessage = 'Please use a stronger password!';
+            break;
+          case 'auth/configuration-not':
+            errorMessage = 'Firebase configuration error. Please check your setup.';
+            break;
+        }
+        
+        console.log('Error details:', error);
+        Alert.alert('Error', errorMessage);
       });
-  };
-
-
+};
 
   return (
     <View style={styles.container}>
@@ -48,10 +87,23 @@ const SignUpScreen = ({navigation}) => {
         <Text style={styles.title}>Fatmore</Text>
 
         <View style={styles.inputsContainer}>
-          {/* value, onChangeText */}
-          <MyTextInput value={email} onChangeText={text => setEmail(text)} placeholder="Enter E-mail or User Name" />
-          <MyTextInput value={password} onChangeText={text => setPassword(text)} placeholder="Password" secureTextEntry />
-          <MyTextInput value={confirmPassword} onChangeText={text => setConfirmPassword(text)} placeholder="Confirm Password" secureTextEntry />
+          <MyTextInput 
+            value={email} 
+            onChangeText={(text: string) => setEmail(text)} 
+            placeholder="Enter E-mail or User Name" 
+          />
+          <MyTextInput 
+            value={password} 
+            onChangeText={(text: string) => setPassword(text)} 
+            placeholder="Password" 
+            secureTextEntry 
+          />
+          <MyTextInput 
+            value={confirmPassword} 
+            onChangeText={(text: string) => setConfirmPassword(text)} 
+            placeholder="Confirm Password" 
+            secureTextEntry 
+          />
 
           <MyButton onPress={signUpTestFn} title={'Sign Up'} />
 

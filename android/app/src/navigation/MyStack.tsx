@@ -18,3 +18,16 @@ export default function MyStack() {
     </Stack.Navigator>
   );
 }
+/*************  ✨ Codeium Command ⭐  *************/
+/******  a978a538-f61e-469a-b193-7abea21325d2  *******//**
+ * SignUpScreen component
+ *
+ * This component renders the sign up screen, which contains form
+ * elements to capture user's email address, password, and confirm
+ * password. It also renders the "Sign Up" button that calls the
+ * `signUpTestFn` when pressed, which attempts to create a new user
+ * in Firebase Authentication.
+ *
+ * @param {NavigationProp<RootStackParamList, 'SignUp'>} navigation
+ *   The navigation prop passed from the parent component.
+ */
