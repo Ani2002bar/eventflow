@@ -80,7 +80,7 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
         source={require('../assets/background.png')}
         style={styles.imageBackground}>
         <Image
-          source={require('../assets/food/food.png')}
+          source={require('../assets/food/eventflow.png')}
           style={styles.foodImage}
         />
 
