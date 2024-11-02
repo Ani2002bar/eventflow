@@ -1,10 +1,19 @@
-import {StyleSheet, Text, TextInput, View} from 'react-native';
-import React, {FC} from 'react';
+import {StyleSheet, Text, TextInput, TextInputProps, View} from 'react-native';
+import React from 'react';
 
-const MyTextInput = ({...props}) => {
+// Extend the standard TextInput props
+interface Props extends TextInputProps {
+  // Add any additional custom props here if needed
+}
+
+const MyTextInput: React.FC<Props> = ({...props}) => {
   return (
     <View style={styles.container}>
-      <TextInput style={styles.input} {...props} />
+      <TextInput 
+        style={styles.input} 
+        placeholderTextColor="gray"  // Optional: add this if you want consistent placeholder color
+        {...props} 
+      />
       <View style={styles.border} />
     </View>
   );
