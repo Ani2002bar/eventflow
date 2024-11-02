@@ -4,7 +4,9 @@ import { NavigationContainer } from '@react-navigation/native';
 
 import MyStack from './android/app/src/navigation/MyStack';
 import messaging from '@react-native-firebase/messaging';
-
+import { TurboModuleRegistry } from 'react-native';
+const PlatformConstants = TurboModuleRegistry.get('PlatformConstants');
+console.log(PlatformConstants);
 const App = () => {
 
   async function requestUserPermission() {

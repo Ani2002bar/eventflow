@@ -45,7 +45,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       .signInWithEmailAndPassword(email, password)
       .then(res => {
         console.log(res);
-        Alert.alert('Success: Logged In');
+        Alert.alert('Éxito: Has iniciado sesión');
         navigation.navigate('HomeScreen');
       })
       .catch(err => {
@@ -61,7 +61,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           source={require('../assets/food/eventflow.png')}
           style={styles.logo}
         />
-        <Text style={styles.title}>Bienvenidos a EventFlow</Text>
+        <Text style={styles.title}>Bienvenido a EventFlow</Text>
       </View>
 
       <View style={styles.inputsContainer}>
@@ -79,7 +79,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
         <Text
           style={styles.forgotPassword}
-          onPress={() => {/* Add forgot password handler */}}
+          onPress={() => {/* Agregar manejador para recuperar contraseña */}}
         >
           ¿Olvidaste tu contraseña?
         </Text>
@@ -87,14 +87,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         <MyButton title={'Ingresa a EventFlow'} onPress={loginWithEmailAndPass} />
 
         <Text style={styles.noAccount}>
-          ¿No tienes una cuenta?{' '}
-          <Text
-            style={styles.signUpLink}
-            onPress={() => navigation.navigate("SignUp")}
-          >
-            Únete a Eventflow
-          </Text>
+          ¿No tienes una cuenta?
         </Text>
+
+        <MyButton
+          title={'Únete a Eventflow'}
+          onPress={() => navigation.navigate("SignUp")}
+          style={styles.signUpButton}
+        />
       </View>
     </View>
   );
@@ -105,38 +105,44 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
     padding: 20,
+    justifyContent: 'center',
   },
   logoContainer: {
     alignItems: 'center',
-    marginTop: 60,
+    marginBottom: 40,
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: 200, // Tamaño del logo más grande
+    height: 200,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginTop: 20,
     marginBottom: 40,
+    textAlign: 'center',
   },
   inputsContainer: {
     width: '100%',
+    alignItems: 'center',
   },
   forgotPassword: {
-    alignSelf: 'flex-end',
+    textAlign: 'center', // Centrado del texto
     color: '#666',
-    marginBottom: 20,
+    marginTop: 10, // Espacio cercano al campo de contraseña
+    marginBottom: 20, // Separación del botón de inicio de sesión
   },
   noAccount: {
     textAlign: 'center',
     marginTop: 20,
+    marginBottom: 10,
     color: '#666',
   },
-  signUpLink: {
-    color: '#000',
-    textDecorationLine: 'underline',
-  }
+  signUpButton: {
+    backgroundColor: '#6200EA',
+    marginTop: 10,
+    borderRadius: 20,
+  },
 });
 
 export default LoginScreen;
