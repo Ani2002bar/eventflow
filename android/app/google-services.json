@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1062407877324",
+    "project_id": "eventflow-df6a5",
+    "storage_bucket": "eventflow-df6a5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1062407877324:android:05751d6dde8ff386944869",
+        "android_client_info": {
+          "package_name": "com.eventflow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpbeHj0uTDDL8FG3QwZXnT2OALD6biD6Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
