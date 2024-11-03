@@ -4,6 +4,9 @@ import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import HomeScreen from '../screens/HomeScreen';
 import AddFoodOrCategory from '../screens/AddFoodOrCategory';
+import RegistroEventosScreen from '../screens/RegistroEventosScreen';
+import InvitadoNuevoScreen from '../screens/InvitadoNuevoScreen'; 
+import EventDetailScreen from '../screens/EventDetailScreen'; 
 
 const Stack = createStackNavigator();
 
@@ -14,6 +17,9 @@ export default function MyStack() {
       <Stack.Screen name="HomeScreen" component={HomeScreen} />
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="AddFoodOrCategory" component={AddFoodOrCategory} />
+      <Stack.Screen name="RegistroEventosScreen" component={RegistroEventosScreen} />
+      <Stack.Screen name="InvitadoNuevo" component={InvitadoNuevoScreen} />
+      <Stack.Screen name="EventDetailScreen" component={EventDetailScreen} />
 
     </Stack.Navigator>
   );
