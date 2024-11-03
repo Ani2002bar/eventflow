@@ -8,8 +8,9 @@ import {
   FlatList,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import DatePicker from 'react-native-date-picker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { Provider, Portal } from 'react-native-paper';
+import { DatePickerModal, TimePickerModal } from 'react-native-paper-dates';
 import Header from '../components/Header';
 
 type RootStackParamList = {
@@ -19,10 +20,11 @@ type RootStackParamList = {
 
 const RegistroEventosScreen: React.FC = () => {
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState<Date | null>(null);
+  const [time, setTime] = useState<Date | null>(null);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
   const [location, setLocation] = useState('');
-  const [time, setTime] = useState('');
   const [observations, setObservations] = useState('');
   const [assistants, setAssistants] = useState<string[]>(['Ana Barreto', 'Matías Garay']);
 
@@ -41,13 +43,21 @@ const RegistroEventosScreen: React.FC = () => {
     setDatePickerVisibility(true);
   };
 
-  const handleConfirm = (selectedDate: Date) => {
-    setDate(selectedDate);
+  const handleTimePress = () => {
+    setTimePickerVisibility(true);
+  };
+
+  const onDateConfirm = (params: { date: Date }) => {
+    setDate(params.date);
     setDatePickerVisibility(false);
   };
 
-  const handleAddAssistant = () => {
-    navigation.navigate('InvitadoNuevo');
+  const onTimeConfirm = (params: { hours: number; minutes: number }) => {
+    const selectedTime = new Date();
+    selectedTime.setHours(params.hours);
+    selectedTime.setMinutes(params.minutes);
+    setTime(selectedTime);
+    setTimePickerVisibility(false);
   };
 
   const handleCreateEvent = () => {
@@ -55,90 +65,106 @@ const RegistroEventosScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Header />
+    <Provider>
+      <View style={styles.container}>
+        <Header />
 
-      <Text style={styles.label}>Descripción</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Descripción del evento"
-        value={description}
-        onChangeText={setDescription}
-      />
-
-      <Text style={styles.label}>Fecha</Text>
-      <TouchableOpacity onPress={handleDatePress}>
+        <Text style={styles.label}>Descripción</Text>
         <TextInput
           style={styles.input}
-          placeholder="DD/MM/AAAA"
-          value={date.toLocaleDateString('es-ES')}
-          editable={false}
+          placeholder="Descripción del evento"
+          value={description}
+          onChangeText={setDescription}
         />
-      </TouchableOpacity>
 
-      <DatePicker
-        modal
-        open={isDatePickerVisible}
-        date={date}
-        mode="date"
-        onConfirm={(selectedDate) => {
-          handleConfirm(selectedDate);
-        }}
-        onCancel={() => setDatePickerVisibility(false)}
-        title="Selecciona una fecha"
-        confirmText="Aceptar"
-        cancelText="Cancelar"
-        theme="light" // For a light theme, matching your app's colors
-        textColor="#6200EA" // Primary color for selected text/buttons
-      />
+        <Text style={styles.label}>Fecha</Text>
+        <TouchableOpacity onPress={handleDatePress}>
+          <TextInput
+            style={styles.input}
+            placeholder="DD/MM/AAAA"
+            value={date ? date.toLocaleDateString('es-ES') : ''}
+            editable={false}
+          />
+        </TouchableOpacity>
 
-      <Text style={styles.label}>Ubicación</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Lugar del evento"
-        value={location}
-        onChangeText={setLocation}
-      />
+        <Text style={styles.label}>Hora</Text>
+        <TouchableOpacity onPress={handleTimePress}>
+          <TextInput
+            style={styles.input}
+            placeholder="HH:MM"
+            value={time ? `${time.getHours()}:${time.getMinutes().toString().padStart(2, '0')}` : ''}
+            editable={false}
+          />
+        </TouchableOpacity>
 
-      <Text style={styles.label}>Hora</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="HH:MM"
-        value={time}
-        onChangeText={setTime}
-      />
+        <Portal>
+          <DatePickerModal
+            visible={isDatePickerVisible}
+            mode="single"
+            onDismiss={() => setDatePickerVisibility(false)}
+            date={date || new Date()}
+            onConfirm={onDateConfirm}
+            locale="es"
+            saveLabel="Aceptar"
+            label="Selecciona la fecha"
+            animationType="slide"
+            theme={{ colors: { primary: '#6200EA' } }}
+          />
 
-      <Text style={styles.label}>Observaciones</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Detalles adicionales"
-        value={observations}
-        onChangeText={setObservations}
-      />
+          <TimePickerModal
+            visible={isTimePickerVisible}
+            onDismiss={() => setTimePickerVisibility(false)}
+            onConfirm={onTimeConfirm}
+            hours={time ? time.getHours() : undefined}
+            minutes={time ? time.getMinutes() : undefined}
+            label="Selecciona la hora"
+            cancelLabel="Cancelar"
+            confirmLabel="Aceptar"
+            animationType="slide"
+            theme={{ colors: { primary: '#6200EA' } }}
+          />
+        </Portal>
 
-      <View style={styles.assistantsSection}>
-        <Text style={styles.label}>Asistentes</Text>
-        <FlatList
-          data={assistants}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.assistantContainer}>
-              <Text style={styles.assistantText}>{item}</Text>
-              <TouchableOpacity onPress={() => setAssistants(assistants.filter(a => a !== item))}>
-                <Text style={styles.removeText}>Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+        <Text style={styles.label}>Ubicación</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Lugar del evento"
+          value={location}
+          onChangeText={setLocation}
         />
-        <TouchableOpacity onPress={handleAddAssistant} style={styles.addButton}>
-          <Icon name="add" size={24} color="#fff" />
+
+        <Text style={styles.label}>Observaciones</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Detalles adicionales"
+          value={observations}
+          onChangeText={setObservations}
+        />
+
+        <View style={styles.assistantsSection}>
+          <Text style={styles.label}>Asistentes</Text>
+          <FlatList
+            data={assistants}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <View style={styles.assistantContainer}>
+                <Text style={styles.assistantText}>{item}</Text>
+                <TouchableOpacity onPress={() => setAssistants(assistants.filter(a => a !== item))}>
+                  <Text style={styles.removeText}>Eliminar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          />
+          <TouchableOpacity onPress={() => navigation.navigate('InvitadoNuevo')} style={styles.addButton}>
+            <Icon name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.createButton} onPress={handleCreateEvent}>
+          <Text style={styles.createButtonText}>CREAR EVENTO</Text>
         </TouchableOpacity>
       </View>
-
-      <TouchableOpacity style={styles.createButton} onPress={handleCreateEvent}>
-        <Text style={styles.createButtonText}>CREAR EVENTO</Text>
-      </TouchableOpacity>
-    </View>
+    </Provider>
   );
 };
 
