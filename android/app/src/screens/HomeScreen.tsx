@@ -10,13 +10,17 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Picker } from '@react-native-picker/picker';
+import firestore from '@react-native-firebase/firestore';
 import Header from '../components/Header';
 
 interface Event {
   id: string;
-  title: string;
-  date: string;
   description: string;
+  date: string;
+  time: string;
+  location: string;
+  observations: string;
+  assistants: string[];
 }
 
 const HomeScreen: React.FC = () => {
@@ -25,27 +29,52 @@ const HomeScreen: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState('');
   const navigation = useNavigation();
 
+  const fetchEvents = async () => {
+    try {
+      const eventsList: Event[] = [];
+      const querySnapshot = await firestore().collection('events').get();
+      querySnapshot.forEach((doc) => {
+        eventsList.push({ id: doc.id, ...doc.data() } as Event);
+      });
+      setEvents(eventsList);
+    } catch (error) {
+      console.error("Error al cargar eventos:", error);
+    }
+  };
+
   useEffect(() => {
-    setEvents([
-      { id: '1', title: 'Fiesta XX', date: '2023-08-10', description: 'Celebración especial con amigos.' },
-      { id: '2', title: 'Casamiento', date: '2023-08-20', description: 'Boda de amigos.' },
-    ]);
-  }, []);
+    fetchEvents();
+
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchEvents();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const renderEventItem = ({ item }: { item: Event }) => {
     const eventDate = new Date(item.date);
+    const eventTime = new Date(item.time);
+    const formattedDate = eventDate.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+    const formattedTime = `${eventTime.getHours()}:${eventTime.getMinutes().toString().padStart(2, '0')}`;
+
     return (
       <TouchableOpacity
         style={styles.eventCard}
         onPress={() => navigation.navigate('EventDetailScreen', { eventId: item.id })}
       >
         <View style={styles.eventDateContainer}>
-          <Text style={styles.eventMonth}>{eventDate.toLocaleString('default', { month: 'short' })}</Text>
+          <Text style={styles.eventMonth}>{eventDate.toLocaleString('es-ES', { month: 'short' })}</Text>
           <Text style={styles.eventDay}>{eventDate.getDate()}</Text>
         </View>
         <View style={styles.eventDetails}>
-          <Text style={styles.eventTitle}>{item.title}</Text>
-          <Text style={styles.eventDate}>{item.date}</Text>
+          <Text style={styles.eventTitle}>{item.description}</Text>
+          <Text style={styles.eventDate}>Fecha: {formattedDate}</Text>
+          <Text style={styles.eventTime}>Hora: {formattedTime}</Text>
         </View>
         <TouchableOpacity style={styles.optionsButton}>
           <Icon name="ellipsis-horizontal" size={20} color="#333" />
@@ -56,58 +85,56 @@ const HomeScreen: React.FC = () => {
 
   const filteredEvents = events.filter((event) => {
     const eventMonth = new Date(event.date).getMonth() + 1;
-    return selectedMonth === '' || eventMonth === parseInt(selectedMonth);
+    return (selectedMonth === '' || eventMonth === parseInt(selectedMonth)) &&
+           (search === '' || event.description.toLowerCase().includes(search.toLowerCase()));
   });
 
   return (
     <View style={styles.container}>
-      {/* Reutilizar el componente Header */}
       <Header />
 
-      {/* Barra de búsqueda */}
-      <View style={styles.searchContainer}>
-        <Icon name="search" size={20} color="#888" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar evento"
-          value={search}
-          onChangeText={setSearch}
+      <View style={styles.contentContainer}>
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color="#888" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar evento"
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
+
+        <View style={styles.filterContainer}>
+          <Text style={styles.filterLabel}>Filtrar por mes:</Text>
+          <Picker
+            selectedValue={selectedMonth}
+            style={styles.picker}
+            onValueChange={(itemValue) => setSelectedMonth(itemValue)}
+          >
+            <Picker.Item label="Todos" value="" />
+            <Picker.Item label="Enero" value="1" />
+            <Picker.Item label="Febrero" value="2" />
+            <Picker.Item label="Marzo" value="3" />
+            <Picker.Item label="Abril" value="4" />
+            <Picker.Item label="Mayo" value="5" />
+            <Picker.Item label="Junio" value="6" />
+            <Picker.Item label="Julio" value="7" />
+            <Picker.Item label="Agosto" value="8" />
+            <Picker.Item label="Septiembre" value="9" />
+            <Picker.Item label="Octubre" value="10" />
+            <Picker.Item label="Noviembre" value="11" />
+            <Picker.Item label="Diciembre" value="12" />
+          </Picker>
+        </View>
+
+        <FlatList
+          data={filteredEvents}
+          keyExtractor={(item) => item.id}
+          renderItem={renderEventItem}
+          contentContainerStyle={styles.eventList}
         />
       </View>
 
-      {/* Filtro de mes */}
-      <View style={styles.filterContainer}>
-        <Text style={styles.filterLabel}>Filtrar por mes:</Text>
-        <Picker
-          selectedValue={selectedMonth}
-          style={styles.picker}
-          onValueChange={(itemValue) => setSelectedMonth(itemValue)}
-        >
-          <Picker.Item label="Todos" value="" />
-          <Picker.Item label="Enero" value="1" />
-          <Picker.Item label="Febrero" value="2" />
-          <Picker.Item label="Marzo" value="3" />
-          <Picker.Item label="Abril" value="4" />
-          <Picker.Item label="Mayo" value="5" />
-          <Picker.Item label="Junio" value="6" />
-          <Picker.Item label="Julio" value="7" />
-          <Picker.Item label="Agosto" value="8" />
-          <Picker.Item label="Septiembre" value="9" />
-          <Picker.Item label="Octubre" value="10" />
-          <Picker.Item label="Noviembre" value="11" />
-          <Picker.Item label="Diciembre" value="12" />
-        </Picker>
-      </View>
-
-      {/* Lista de eventos */}
-      <FlatList
-        data={filteredEvents}
-        keyExtractor={(item) => item.id}
-        renderItem={renderEventItem}
-        contentContainerStyle={styles.eventList}
-      />
-
-      {/* Botón flotante para agregar un nuevo evento */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('RegistroEventosScreen')}
@@ -122,7 +149,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
-    padding: 20,
+  },
+  contentContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    flex: 1,
+    paddingBottom: 80, // Espacio para que no se superpongan elementos en la parte superior
   },
   searchContainer: {
     flexDirection: 'row',
@@ -131,12 +163,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 8,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+    marginBottom: 10,
   },
   searchInput: {
     marginLeft: 10,
@@ -147,7 +174,7 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   filterLabel: {
     fontSize: 16,
@@ -158,7 +185,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   eventList: {
-    paddingBottom: 80,
+    paddingTop: 10,
   },
   eventCard: {
     flexDirection: 'row',
@@ -175,14 +202,17 @@ const styles = StyleSheet.create({
   },
   eventDateContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    width: 50,
     marginRight: 15,
   },
   eventMonth: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6200EA',
+    textTransform: 'uppercase',
   },
   eventDay: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
   },
@@ -190,14 +220,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   eventTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
   },
   eventDate: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
-    marginTop: 5,
+  },
+  eventTime: {
+    fontSize: 12,
+    color: '#666',
   },
   optionsButton: {
     padding: 5,

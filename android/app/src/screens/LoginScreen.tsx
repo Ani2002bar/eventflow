@@ -25,6 +25,37 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     });
   }, []);
 
+  const validateInputs = (): boolean => {
+    if (email.trim() === '' && password.trim() === '') {
+      Alert.alert(
+        'Campos Vacíos',
+        'Por favor ingresa tu correo y contraseña para continuar.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return false;
+    }
+
+    if (email.trim() === '') {
+      Alert.alert(
+        'Campo Vacío',
+        'Por favor ingresa tu correo electrónico.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return false;
+    }
+
+    if (password.trim() === '') {
+      Alert.alert(
+        'Campo Vacío',
+        'Por favor ingresa tu contraseña.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return false;
+    }
+
+    return true;
+  };
+
   const onGoogleButtonPress = async () => {
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -41,16 +72,88 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   };
 
   const loginWithEmailAndPass = () => {
+    if (!validateInputs()) return;
+
     auth()
       .signInWithEmailAndPassword(email, password)
       .then(res => {
         console.log(res);
-        Alert.alert('Éxito: Has iniciado sesión');
-        navigation.navigate('HomeScreen');
+        Alert.alert(
+          '¡Bienvenido!',
+          'Has iniciado sesión exitosamente.',
+          [
+            {
+              text: 'Continuar',
+              onPress: () => navigation.navigate('HomeScreen')
+            }
+          ]
+        );
       })
-      .catch(err => {
-        console.log(err);
-        Alert.alert(err.message);
+      .catch(error => {
+        console.log(error);
+        let errorMessage = 'Ha ocurrido un error. Por favor intenta nuevamente.';
+        let errorTitle = 'Error de Inicio de Sesión';
+
+        switch (error.code) {
+          case 'auth/invalid-email':
+            errorMessage = 'El formato del correo electrónico no es válido.';
+            break;
+          case 'auth/user-not-found':
+            errorTitle = 'Usuario No Encontrado';
+            errorMessage = 'No existe una cuenta asociada a este correo electrónico.\n\n¿Deseas crear una nueva cuenta?';
+            Alert.alert(
+              errorTitle,
+              errorMessage,
+              [
+                {
+                  text: 'Cancelar',
+                  style: 'cancel'
+                },
+                {
+                  text: 'Crear Cuenta',
+                  onPress: () => navigation.navigate('SignUp'),
+                  style: 'default'
+                }
+              ]
+            );
+            return;
+          case 'auth/wrong-password':
+            errorMessage = 'La contraseña ingresada es incorrecta.\n\n¿Olvidaste tu contraseña?';
+            Alert.alert(
+              errorTitle,
+              errorMessage,
+              [
+                {
+                  text: 'Cancelar',
+                  style: 'cancel'
+                },
+                {
+                  text: 'Recuperar Contraseña',
+                  onPress: () => navigation.navigate('RecoverPassword'),
+                  style: 'default'
+                }
+              ]
+            );
+            return;
+          case 'auth/too-many-requests':
+            errorMessage = 'Demasiados intentos fallidos. Por favor intenta más tarde o recupera tu contraseña.';
+            break;
+          case 'auth/network-request-failed':
+            errorTitle = 'Error de Conexión';
+            errorMessage = 'No se pudo conectar al servidor. Verifica tu conexión a internet e intenta nuevamente.';
+            break;
+        }
+
+        Alert.alert(
+          errorTitle,
+          errorMessage,
+          [
+            {
+              text: 'Entendido',
+              style: 'cancel'
+            }
+          ]
+        );
       });
   };
 
@@ -79,7 +182,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
         <Text
           style={styles.forgotPassword}
-          onPress={() => {/* Agregar manejador para recuperar contraseña */}}
+          onPress={() => navigation.navigate('RecoverPassword')}
         >
           ¿Olvidaste tu contraseña?
         </Text>
@@ -112,7 +215,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logo: {
-    width: 200, // Tamaño del logo más grande
+    width: 200,
     height: 200,
   },
   title: {
@@ -127,10 +230,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   forgotPassword: {
-    textAlign: 'center', // Centrado del texto
+    textAlign: 'center',
     color: '#666',
-    marginTop: 10, // Espacio cercano al campo de contraseña
-    marginBottom: 20, // Separación del botón de inicio de sesión
+    marginTop: 10,
+    marginBottom: 20,
   },
   noAccount: {
     textAlign: 'center',

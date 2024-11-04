@@ -7,6 +7,9 @@ import AddFoodOrCategory from '../screens/AddFoodOrCategory';
 import RegistroEventosScreen from '../screens/RegistroEventosScreen';
 import InvitadoNuevoScreen from '../screens/InvitadoNuevoScreen'; 
 import EventDetailScreen from '../screens/EventDetailScreen'; 
+import RecoverPasswordScreen from '../screens/RecoverPasswordScreen';
+
+
 
 const Stack = createStackNavigator();
 
@@ -20,6 +23,8 @@ export default function MyStack() {
       <Stack.Screen name="RegistroEventosScreen" component={RegistroEventosScreen} />
       <Stack.Screen name="InvitadoNuevo" component={InvitadoNuevoScreen} />
       <Stack.Screen name="EventDetailScreen" component={EventDetailScreen} />
+      <Stack.Screen name="RecoverPassword" component={RecoverPasswordScreen} />
+
 
     </Stack.Navigator>
   );

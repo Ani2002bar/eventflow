@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
 import 'react-native-gesture-handler';  // This should be at the very top
 import { NavigationContainer } from '@react-navigation/native';
+import firestore from '@react-native-firebase/firestore';
 
 import MyStack from './android/app/src/navigation/MyStack';
 import messaging from '@react-native-firebase/messaging';
 import { TurboModuleRegistry } from 'react-native';
+
 const PlatformConstants = TurboModuleRegistry.get('PlatformConstants');
 console.log(PlatformConstants);
 const App = () => {

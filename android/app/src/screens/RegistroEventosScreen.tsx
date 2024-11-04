@@ -11,6 +11,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Provider, Portal } from 'react-native-paper';
 import { DatePickerModal, TimePickerModal } from 'react-native-paper-dates';
+import firestore from '@react-native-firebase/firestore';
 import Header from '../components/Header';
 
 type RootStackParamList = {
@@ -60,8 +61,31 @@ const RegistroEventosScreen: React.FC = () => {
     setTimePickerVisibility(false);
   };
 
-  const handleCreateEvent = () => {
-    navigation.goBack();
+  const handleCreateEvent = async () => {
+    if (!description || !date || !time || !location) {
+      alert("Por favor completa todos los campos.");
+      return;
+    }
+
+    // Crear un objeto de evento
+    const newEvent = {
+      description,
+      date: date.toISOString(),
+      time: time.toISOString(),
+      location,
+      observations,
+      assistants,
+    };
+
+    try {
+      // Guardar el evento en Firestore
+      await firestore().collection('events').add(newEvent);
+      alert("Evento creado exitosamente!");
+      navigation.goBack();
+    } catch (error) {
+      console.error("Error al crear el evento: ", error);
+      alert("Hubo un error al crear el evento. Inténtalo nuevamente.");
+    }
   };
 
   return (

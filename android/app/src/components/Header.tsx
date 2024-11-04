@@ -12,13 +12,27 @@ const Header: React.FC = () => {
   const openMenu = () => setVisible(true);
   const closeMenu = () => setVisible(false);
 
+  const confirmLogout = () => {
+    Alert.alert(
+      "¿Deseas cerrar sesión?",
+      "",
+      [
+        { text: "Cancelar", style: "cancel", onPress: closeMenu },
+        { text: "Cerrar sesión", onPress: handleLogout },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const handleLogout = async () => {
     closeMenu();
-    // Limpiar los datos de sesión
     try {
-      await AsyncStorage.removeItem('userToken'); // Remueve el token o cualquier dato de sesión
+      await AsyncStorage.removeItem('userToken'); // Remueve el token de sesión
       console.log("Sesión cerrada");
-      navigation.replace('LoginScreen'); // Redirigir a la pantalla de inicio de sesión
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }], // Redirige a 'Login'
+      });
     } catch (error) {
       console.error("Error cerrando sesión:", error);
       Alert.alert("Error", "No se pudo cerrar la sesión. Inténtalo de nuevo.");
@@ -43,7 +57,7 @@ const Header: React.FC = () => {
         >
           <Menu.Item onPress={goToProfile} title="Ver Perfil" />
           <Divider />
-          <Menu.Item onPress={handleLogout} title="Cerrar sesión" />
+          <Menu.Item onPress={confirmLogout} title="Cerrar sesión" />
         </Menu>
 
         {/* Logo centrado */}
