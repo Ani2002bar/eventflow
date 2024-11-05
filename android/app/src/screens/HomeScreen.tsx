@@ -23,7 +23,7 @@ interface Event {
   location: string;
   observations: string;
   assistants: string[];
-  userId?: string; // Hacemos el userId opcional para mantener compatibilidad
+  userId?: string;
 }
 
 const HomeScreen: React.FC = () => {
@@ -38,22 +38,22 @@ const HomeScreen: React.FC = () => {
   const openMenu = () => setVisible(true);
   const closeMenu = () => setVisible(false);
 
+  // Función para cargar eventos del usuario autenticado
   const fetchEvents = async () => {
     try {
       if (!currentUser) return;
 
       const eventsList: Event[] = [];
-      // Obtenemos todos los eventos
-      const querySnapshot = await firestore().collection('events').get();
-      
+      const querySnapshot = await firestore()
+        .collection('events')
+        .where('userId', '==', currentUser.uid) // Filtra por userId del usuario autenticado
+        .get();
+
       querySnapshot.forEach((doc) => {
         const eventData = { id: doc.id, ...doc.data() } as Event;
-        // Solo agregamos el evento si pertenece al usuario actual o no tiene userId
-        if (eventData.userId === currentUser.uid) {
-          eventsList.push(eventData);
-        }
+        eventsList.push(eventData);
       });
-      
+
       setEvents(eventsList);
     } catch (error) {
       console.error("Error al cargar eventos:", error);
@@ -71,7 +71,6 @@ const HomeScreen: React.FC = () => {
   }, [navigation]);
 
   const handleModifyEvent = (event: Event) => {
-    // Solo permitir modificar si el evento pertenece al usuario actual
     if (event.userId && event.userId === currentUser?.uid) {
       setSelectedEvent(event);
       closeMenu();
@@ -83,7 +82,6 @@ const HomeScreen: React.FC = () => {
 
   const handleDeleteEvent = async (event: Event) => {
     try {
-      // Solo permitir eliminar si el evento pertenece al usuario actual
       if (event.userId && event.userId === currentUser?.uid) {
         await firestore().collection('events').doc(event.id).delete();
         setEvents(events.filter(e => e.id !== event.id));
@@ -97,14 +95,13 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  
+  // Filtrado de eventos basado en el mes seleccionado y búsqueda
   const filteredEvents = events.filter((event) => {
     const eventMonth = new Date(event.date).getMonth() + 1;
     return (selectedMonth === '' || eventMonth === parseInt(selectedMonth)) &&
            (search === '' || event.description.toLowerCase().includes(search.toLowerCase()));
   });
 
-  // El resto del código permanece igual
   const renderEventItem = ({ item }: { item: Event }) => {
     const eventDate = new Date(item.date);
     const eventTime = new Date(item.time);
@@ -115,7 +112,6 @@ const HomeScreen: React.FC = () => {
     });
     const formattedTime = `${eventTime.getHours()}:${eventTime.getMinutes().toString().padStart(2, '0')}`;
 
-    // Solo mostrar el menú de opciones si el evento pertenece al usuario actual
     const canModify = item.userId === currentUser?.uid;
 
     return (
@@ -149,7 +145,6 @@ const HomeScreen: React.FC = () => {
       </TouchableOpacity>
     );
   };
-
 
   return (
     <Provider>
@@ -289,26 +284,23 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   eventDate: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
   },
   eventTime: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
-  },
-  optionsButton: {
-    padding: 5,
   },
   fab: {
     position: 'absolute',
-    bottom: 30,
-    right: 30,
+    right: 20,
+    bottom: 20,
     backgroundColor: '#6200EA',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
+    justifyContent: 'center',
     elevation: 5,
   },
 });

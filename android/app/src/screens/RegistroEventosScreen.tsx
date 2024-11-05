@@ -1,4 +1,3 @@
-// screens/RegistroEventosScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -6,19 +5,20 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  FlatList,
   Alert,
+  FlatList,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Provider, Portal } from 'react-native-paper';
 import { DatePickerModal, TimePickerModal } from 'react-native-paper-dates';
 import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
 import Header from '../components/Header';
 import GuestDetailsModal from '../components/GuestDetailsModal';
 
 type RootStackParamList = {
-  RegistroEventos: { newGuest?: { nombre: string } };
+  RegistroEventos: { newGuest?: { nombre: string; id: string } };
   InvitadoNuevo: undefined;
 };
 
@@ -36,19 +36,10 @@ const RegistroEventosScreen: React.FC = () => {
 
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'RegistroEventos'>>();
+  const currentUser = auth().currentUser;
 
   useEffect(() => {
-    const fetchGuests = async () => {
-      try {
-        const snapshot = await firestore().collection('guests').get();
-        const guests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setAssistants(guests);
-      } catch (error) {
-        console.error("Error al cargar los invitados: ", error);
-      }
-    };
-
-    fetchGuests();
+    setAssistants([]);
   }, []);
 
   useEffect(() => {
@@ -76,8 +67,13 @@ const RegistroEventosScreen: React.FC = () => {
   };
 
   const handleCreateEvent = async () => {
-    if (!description || !date || !time || !location) {
-      Alert.alert("Por favor completa todos los campos.");
+    if (!description || !date || !time || !location || assistants.length === 0) {
+      Alert.alert('Por favor completa todos los campos y añade al menos un invitado.');
+      return;
+    }
+
+    if (!currentUser) {
+      Alert.alert('Error', 'No se pudo identificar al usuario.');
       return;
     }
 
@@ -87,16 +83,17 @@ const RegistroEventosScreen: React.FC = () => {
       time: time.toISOString(),
       location,
       observations,
-      assistants: assistants.map(a => a.nombre),
+      assistants: assistants.map((a) => a.nombre),
+      userId: currentUser.uid, // Añade el ID del usuario autenticado
     };
 
     try {
       await firestore().collection('events').add(newEvent);
-      Alert.alert("Evento creado exitosamente!");
+      Alert.alert('Evento creado exitosamente!');
       navigation.goBack();
     } catch (error) {
-      console.error("Error al crear el evento: ", error);
-      Alert.alert("Hubo un error al crear el evento. Inténtalo nuevamente.");
+      console.error('Error al crear el evento: ', error);
+      Alert.alert('Hubo un error al crear el evento. Inténtalo nuevamente.');
     }
   };
 
@@ -113,12 +110,12 @@ const RegistroEventosScreen: React.FC = () => {
   const handleDeleteGuest = async (guestId: string) => {
     try {
       await firestore().collection('guests').doc(guestId).delete();
-      setAssistants((prevAssistants) => prevAssistants.filter(g => g.id !== guestId));
-      Alert.alert("Invitado eliminado", "El invitado ha sido eliminado exitosamente.");
+      setAssistants((prevAssistants) => prevAssistants.filter((g) => g.id !== guestId));
+      Alert.alert('Invitado eliminado', 'El invitado ha sido eliminado exitosamente.');
       closeGuestModal();
     } catch (error) {
-      console.error("Error al eliminar el invitado: ", error);
-      Alert.alert("Error", "No se pudo eliminar el invitado.");
+      console.error('Error al eliminar el invitado: ', error);
+      Alert.alert('Error', 'No se pudo eliminar el invitado.');
     }
   };
 
@@ -126,13 +123,13 @@ const RegistroEventosScreen: React.FC = () => {
     try {
       await firestore().collection('guests').doc(updatedGuest.id).update(updatedGuest);
       setAssistants((prevAssistants) =>
-        prevAssistants.map(guest => guest.id === updatedGuest.id ? updatedGuest : guest)
+        prevAssistants.map((guest) => (guest.id === updatedGuest.id ? updatedGuest : guest))
       );
-      Alert.alert("Invitado actualizado", "Los detalles del invitado han sido actualizados.");
+      Alert.alert('Invitado actualizado', 'Los detalles del invitado han sido actualizados.');
       closeGuestModal();
     } catch (error) {
-      console.error("Error al actualizar el invitado: ", error);
-      Alert.alert("Error", "No se pudo actualizar el invitado.");
+      console.error('Error al actualizar el invitado: ', error);
+      Alert.alert('Error', 'No se pudo actualizar el invitado.');
     }
   };
 
@@ -211,24 +208,30 @@ const RegistroEventosScreen: React.FC = () => {
           onChangeText={setObservations}
         />
 
-        <View style={styles.assistantsSection}>
-          <Text style={styles.label}>Asistentes</Text>
-          <FlatList
-            data={assistants}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity onPress={() => openGuestModal(item)}>
-                <View style={styles.assistantContainer}>
-                  <Text style={styles.assistantText}>{item.nombre}</Text>
-                  <Text style={styles.detailsText}>Detalles</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-          />
-          <TouchableOpacity onPress={() => navigation.navigate('InvitadoNuevo')} style={styles.addButton}>
-            <Icon name="add" size={24} color="#fff" />
-          </TouchableOpacity>
+        <Text style={styles.label}>Asistentes</Text>
+        <View style={styles.assistantsContainer}>
+          {assistants.length === 0 ? (
+            <Text style={styles.emptyMessage}>Añadir invitados al evento</Text>
+          ) : (
+            <FlatList
+              data={assistants}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity onPress={() => openGuestModal(item)}>
+                  <View style={styles.assistantContainer}>
+                    <Text style={styles.assistantText}>{item.nombre}</Text>
+                    <Text style={styles.detailsText}>Detalles</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              style={styles.assistantsList}
+            />
+          )}
         </View>
+
+        <TouchableOpacity onPress={() => navigation.navigate('InvitadoNuevo')} style={styles.addButton}>
+          <Icon name="add" size={24} color="#fff" />
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.createButton} onPress={handleCreateEvent}>
           <Text style={styles.createButtonText}>CREAR EVENTO</Text>
@@ -265,41 +268,55 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: '#fff',
   },
-  assistantsSection: {
-    marginVertical: 15,
+  assistantsContainer: {
+    backgroundColor: '#f0f0f0',
+    padding: 10,
+    borderRadius: 5,
+    height: 150,
+  },
+  assistantsList: {
+    flexGrow: 0,
+  },
+  emptyMessage: {
+    color: '#888',
+    fontStyle: 'italic',
   },
   assistantContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    marginBottom: 5,
+    backgroundColor: '#fff',
   },
   assistantText: {
     fontSize: 16,
   },
   detailsText: {
-    color: '#007bff',
     fontSize: 14,
+    color: '#007bff',
   },
   addButton: {
+    position: 'absolute',
+    bottom: 70,
+    right: 20,
     backgroundColor: '#007bff',
-    alignItems: 'center',
-    padding: 10,
     borderRadius: 50,
-    width: 50,
-    alignSelf: 'flex-end',
+    padding: 15,
   },
   createButton: {
     backgroundColor: '#28a745',
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',
+    marginTop: 10,
   },
   createButtonText: {
     color: '#fff',
-    fontSize: 16,
     fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 
