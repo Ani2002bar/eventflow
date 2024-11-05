@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { Picker } from '@react-native-picker/picker';
 import firestore from '@react-native-firebase/firestore';
 import Header from '../components/Header';
+import { Menu, Provider } from 'react-native-paper';
 
 interface Event {
   id: string;
@@ -27,7 +28,12 @@ const HomeScreen: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [search, setSearch] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
+  const [visible, setVisible] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const navigation = useNavigation();
+
+  const openMenu = () => setVisible(true);
+  const closeMenu = () => setVisible(false);
 
   const fetchEvents = async () => {
     try {
@@ -52,6 +58,23 @@ const HomeScreen: React.FC = () => {
     return unsubscribe;
   }, [navigation]);
 
+  const handleModifyEvent = (event: Event) => {
+    setSelectedEvent(event);
+    closeMenu();
+    navigation.navigate('ModificarEventoScreen', { eventId: event.id });
+  };
+
+  const handleDeleteEvent = async (event: Event) => {
+    try {
+      await firestore().collection('events').doc(event.id).delete();
+      setEvents(events.filter(e => e.id !== event.id));
+    } catch (error) {
+      console.error("Error al eliminar evento:", error);
+    } finally {
+      closeMenu();
+    }
+  };
+
   const renderEventItem = ({ item }: { item: Event }) => {
     const eventDate = new Date(item.date);
     const eventTime = new Date(item.time);
@@ -63,10 +86,7 @@ const HomeScreen: React.FC = () => {
     const formattedTime = `${eventTime.getHours()}:${eventTime.getMinutes().toString().padStart(2, '0')}`;
 
     return (
-      <TouchableOpacity
-        style={styles.eventCard}
-        onPress={() => navigation.navigate('EventDetailScreen', { eventId: item.id })}
-      >
+      <TouchableOpacity style={styles.eventCard} onPress={() => navigation.navigate('EventDetailScreen', { eventId: item.id })}>
         <View style={styles.eventDateContainer}>
           <Text style={styles.eventMonth}>{eventDate.toLocaleString('es-ES', { month: 'short' })}</Text>
           <Text style={styles.eventDay}>{eventDate.getDate()}</Text>
@@ -76,9 +96,21 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.eventDate}>Fecha: {formattedDate}</Text>
           <Text style={styles.eventTime}>Hora: {formattedTime}</Text>
         </View>
-        <TouchableOpacity style={styles.optionsButton}>
-          <Icon name="ellipsis-horizontal" size={20} color="#333" />
-        </TouchableOpacity>
+        <Menu
+          visible={visible && selectedEvent?.id === item.id}
+          onDismiss={closeMenu}
+          anchor={
+            <TouchableOpacity onPress={() => {
+              setSelectedEvent(item);
+              openMenu();
+            }}>
+              <Icon name="ellipsis-horizontal" size={20} color="#333" />
+            </TouchableOpacity>
+          }
+        >
+          <Menu.Item onPress={() => handleModifyEvent(item)} title="Modificar" />
+          <Menu.Item onPress={() => handleDeleteEvent(item)} title="Eliminar" />
+        </Menu>
       </TouchableOpacity>
     );
   };
@@ -90,58 +122,60 @@ const HomeScreen: React.FC = () => {
   });
 
   return (
-    <View style={styles.container}>
-      <Header />
+    <Provider>
+      <View style={styles.container}>
+        <Header />
 
-      <View style={styles.contentContainer}>
-        <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#888" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar evento"
-            value={search}
-            onChangeText={setSearch}
+        <View style={styles.contentContainer}>
+          <View style={styles.searchContainer}>
+            <Icon name="search" size={20} color="#888" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar evento"
+              value={search}
+              onChangeText={setSearch}
+            />
+          </View>
+
+          <View style={styles.filterContainer}>
+            <Text style={styles.filterLabel}>Filtrar por mes:</Text>
+            <Picker
+              selectedValue={selectedMonth}
+              style={styles.picker}
+              onValueChange={(itemValue) => setSelectedMonth(itemValue)}
+            >
+              <Picker.Item label="Todos" value="" />
+              <Picker.Item label="Enero" value="1" />
+              <Picker.Item label="Febrero" value="2" />
+              <Picker.Item label="Marzo" value="3" />
+              <Picker.Item label="Abril" value="4" />
+              <Picker.Item label="Mayo" value="5" />
+              <Picker.Item label="Junio" value="6" />
+              <Picker.Item label="Julio" value="7" />
+              <Picker.Item label="Agosto" value="8" />
+              <Picker.Item label="Septiembre" value="9" />
+              <Picker.Item label="Octubre" value="10" />
+              <Picker.Item label="Noviembre" value="11" />
+              <Picker.Item label="Diciembre" value="12" />
+            </Picker>
+          </View>
+
+          <FlatList
+            data={filteredEvents}
+            keyExtractor={(item) => item.id}
+            renderItem={renderEventItem}
+            contentContainerStyle={styles.eventList}
           />
         </View>
 
-        <View style={styles.filterContainer}>
-          <Text style={styles.filterLabel}>Filtrar por mes:</Text>
-          <Picker
-            selectedValue={selectedMonth}
-            style={styles.picker}
-            onValueChange={(itemValue) => setSelectedMonth(itemValue)}
-          >
-            <Picker.Item label="Todos" value="" />
-            <Picker.Item label="Enero" value="1" />
-            <Picker.Item label="Febrero" value="2" />
-            <Picker.Item label="Marzo" value="3" />
-            <Picker.Item label="Abril" value="4" />
-            <Picker.Item label="Mayo" value="5" />
-            <Picker.Item label="Junio" value="6" />
-            <Picker.Item label="Julio" value="7" />
-            <Picker.Item label="Agosto" value="8" />
-            <Picker.Item label="Septiembre" value="9" />
-            <Picker.Item label="Octubre" value="10" />
-            <Picker.Item label="Noviembre" value="11" />
-            <Picker.Item label="Diciembre" value="12" />
-          </Picker>
-        </View>
-
-        <FlatList
-          data={filteredEvents}
-          keyExtractor={(item) => item.id}
-          renderItem={renderEventItem}
-          contentContainerStyle={styles.eventList}
-        />
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('RegistroEventosScreen')}
+        >
+          <Icon name="add" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
-
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('RegistroEventosScreen')}
-      >
-        <Icon name="add" size={24} color="#fff" />
-      </TouchableOpacity>
-    </View>
+    </Provider>
   );
 };
 
@@ -154,7 +188,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     flex: 1,
-    paddingBottom: 80, // Espacio para que no se superpongan elementos en la parte superior
+    paddingBottom: 80,
   },
   searchContainer: {
     flexDirection: 'row',

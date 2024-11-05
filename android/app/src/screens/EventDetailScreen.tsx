@@ -9,6 +9,7 @@ import {
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
+import firestore from '@react-native-firebase/firestore';
 
 type RootStackParamList = {
   EventDetailScreen: { eventId: string };
@@ -16,13 +17,12 @@ type RootStackParamList = {
 
 interface Event {
   id: string;
-  title: string;
-  date: string;
   description: string;
+  date: string;
   location: string;
   time: string;
-  notes: string;
-  guests: string[];
+  observations: string;
+  assistants: string[];
 }
 
 const EventDetailScreen: React.FC = () => {
@@ -32,30 +32,28 @@ const EventDetailScreen: React.FC = () => {
   const [event, setEvent] = useState<Event | null>(null);
 
   useEffect(() => {
-    // Simula la carga de los detalles del evento
-    const eventDetails = {
-      '1': {
-        id: '1',
-        title: 'Fiesta XX',
-        date: '10/08/2023',
-        description: 'Celebración especial con amigos.',
-        location: 'Casa de Ana',
-        time: '20:00',
-        notes: 'Traer comida y bebida.',
-        guests: ['Ana Barreto', 'Matías Garay'],
-      },
-      '2': {
-        id: '2',
-        title: 'Casamiento',
-        date: '20/08/2023',
-        description: 'Boda de amigos.',
-        location: 'Salón Principal',
-        time: '18:00',
-        notes: 'Formal',
-        guests: ['Laura Martínez', 'Carlos Perez'],
-      },
+    const fetchEventDetails = async () => {
+      try {
+        const eventDoc = await firestore().collection('events').doc(eventId).get();
+        if (eventDoc.exists) {
+          const eventData = eventDoc.data() as Event;
+          setEvent({
+            ...eventData,
+            date: new Date(eventData.date).toLocaleDateString('es-ES'),
+            time: new Date(eventData.time).toLocaleTimeString('es-ES', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          });
+        } else {
+          console.warn('No se encontró el evento.');
+        }
+      } catch (error) {
+        console.error('Error al cargar detalles del evento:', error);
+      }
     };
-    setEvent(eventDetails[eventId]);
+
+    fetchEventDetails();
   }, [eventId]);
 
   if (!event) {
@@ -79,13 +77,12 @@ const EventDetailScreen: React.FC = () => {
       <Text style={styles.text}>{event.time}</Text>
 
       <Text style={styles.label}>Observaciones</Text>
-      <Text style={styles.text}>{event.notes}</Text>
+      <Text style={styles.text}>{event.observations}</Text>
 
-      {/* Sección de invitados */}
       <View style={styles.assistantsSection}>
         <Text style={styles.label}>Asistentes</Text>
         <FlatList
-          data={event.guests}
+          data={event.assistants}
           keyExtractor={(item, index) => index.toString()}
           renderItem={({ item }) => (
             <View style={styles.assistantContainer}>
