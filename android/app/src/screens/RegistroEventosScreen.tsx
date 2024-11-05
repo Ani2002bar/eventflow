@@ -18,7 +18,7 @@ import Header from '../components/Header';
 import GuestDetailsModal from '../components/GuestDetailsModal';
 
 type RootStackParamList = {
-  RegistroEventos: { newGuest?: { nombre: string; id: string } };
+  RegistroEventos: { newGuest?: { nombre: string; edad: string; sexo: string; telefono: string; id: string } };
   InvitadoNuevo: undefined;
 };
 
@@ -83,12 +83,22 @@ const RegistroEventosScreen: React.FC = () => {
       time: time.toISOString(),
       location,
       observations,
-      assistants: assistants.map((a) => a.nombre),
       userId: currentUser.uid, // Añade el ID del usuario autenticado
     };
 
     try {
-      await firestore().collection('events').add(newEvent);
+      // Crear el evento en Firestore y obtener el ID del evento
+      const eventRef = await firestore().collection('events').add(newEvent);
+      const eventId = eventRef.id;
+
+      // Guardar cada invitado en la colección `guests` con el `eventId`
+      for (const assistant of assistants) {
+        await firestore().collection('guests').add({
+          ...assistant,
+          eventId: eventId, // Asocia el invitado al evento
+        });
+      }
+
       Alert.alert('Evento creado exitosamente!');
       navigation.goBack();
     } catch (error) {
