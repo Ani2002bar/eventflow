@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  Alert,
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import Header from '../components/Header';
@@ -73,6 +74,7 @@ const EventDetailScreen: React.FC = () => {
         setGuests(guestsList);
       } catch (error) {
         console.error('Error al cargar detalles del evento:', error);
+        Alert.alert('Error', 'No se pudieron cargar los detalles del evento.');
       }
     };
 
@@ -95,6 +97,7 @@ const EventDetailScreen: React.FC = () => {
       setGuests((prevGuests) =>
         prevGuests.map((guest) => (guest.id === updatedGuest.id ? updatedGuest : guest))
       );
+      Alert.alert('Éxito', 'Los detalles del invitado se han actualizado.');
       closeGuestModal();
     } catch (error) {
       console.error('Error al actualizar el invitado:', error);
@@ -106,6 +109,7 @@ const EventDetailScreen: React.FC = () => {
     try {
       await firestore().collection('guests').doc(guestId).delete();
       setGuests((prevGuests) => prevGuests.filter((guest) => guest.id !== guestId));
+      Alert.alert('Éxito', 'El invitado ha sido eliminado.');
       closeGuestModal();
     } catch (error) {
       console.error('Error al eliminar el invitado:', error);
