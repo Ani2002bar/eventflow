@@ -7,9 +7,9 @@ import {
   FlatList,
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
 import firestore from '@react-native-firebase/firestore';
+import GuestDetailsModal from '../components/GuestDetailsModal';
 
 type RootStackParamList = {
   EventDetailScreen: { eventId: string };
@@ -22,7 +22,14 @@ interface Event {
   location: string;
   time: string;
   observations: string;
-  assistants: string[];
+}
+
+interface Guest {
+  id: string;
+  nombre: string;
+  edad: string;
+  sexo: string;
+  telefono: string;
 }
 
 const EventDetailScreen: React.FC = () => {
@@ -30,10 +37,14 @@ const EventDetailScreen: React.FC = () => {
   const { eventId } = route.params;
   const navigation = useNavigation();
   const [event, setEvent] = useState<Event | null>(null);
+  const [guests, setGuests] = useState<Guest[]>([]);
+  const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+  const [isModalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchEventDetails = async () => {
       try {
+        // Cargar los detalles del evento
         const eventDoc = await firestore().collection('events').doc(eventId).get();
         if (eventDoc.exists) {
           const eventData = eventDoc.data() as Event;
@@ -48,6 +59,18 @@ const EventDetailScreen: React.FC = () => {
         } else {
           console.warn('No se encontró el evento.');
         }
+
+        // Cargar los invitados relacionados con el `eventId`
+        const guestsSnapshot = await firestore()
+          .collection('guests')
+          .where('eventId', '==', eventId)
+          .get();
+
+        const guestsList = guestsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Guest[];
+        setGuests(guestsList);
       } catch (error) {
         console.error('Error al cargar detalles del evento:', error);
       }
@@ -55,6 +78,40 @@ const EventDetailScreen: React.FC = () => {
 
     fetchEventDetails();
   }, [eventId]);
+
+  const openGuestModal = (guest: Guest) => {
+    setSelectedGuest(guest);
+    setModalVisible(true);
+  };
+
+  const closeGuestModal = () => {
+    setSelectedGuest(null);
+    setModalVisible(false);
+  };
+
+  const handleUpdateGuest = async (updatedGuest: Guest) => {
+    try {
+      await firestore().collection('guests').doc(updatedGuest.id).update(updatedGuest);
+      setGuests((prevGuests) =>
+        prevGuests.map((guest) => (guest.id === updatedGuest.id ? updatedGuest : guest))
+      );
+      closeGuestModal();
+    } catch (error) {
+      console.error('Error al actualizar el invitado:', error);
+      Alert.alert('Error', 'No se pudo actualizar el invitado.');
+    }
+  };
+
+  const handleDeleteGuest = async (guestId: string) => {
+    try {
+      await firestore().collection('guests').doc(guestId).delete();
+      setGuests((prevGuests) => prevGuests.filter((guest) => guest.id !== guestId));
+      closeGuestModal();
+    } catch (error) {
+      console.error('Error al eliminar el invitado:', error);
+      Alert.alert('Error', 'No se pudo eliminar el invitado.');
+    }
+  };
 
   if (!event) {
     return <Text style={styles.loadingText}>Cargando...</Text>;
@@ -82,12 +139,14 @@ const EventDetailScreen: React.FC = () => {
       <View style={styles.assistantsSection}>
         <Text style={styles.label}>Asistentes</Text>
         <FlatList
-          data={event.assistants}
-          keyExtractor={(item, index) => index.toString()}
+          data={guests}
+          keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.assistantContainer}>
-              <Text style={styles.assistantText}>{item}</Text>
-            </View>
+            <TouchableOpacity onPress={() => openGuestModal(item)}>
+              <View style={styles.assistantContainer}>
+                <Text style={styles.assistantText}>{item.nombre}</Text>
+              </View>
+            </TouchableOpacity>
           )}
         />
       </View>
@@ -95,6 +154,16 @@ const EventDetailScreen: React.FC = () => {
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Text style={styles.backButtonText}>Volver</Text>
       </TouchableOpacity>
+
+      {selectedGuest && (
+        <GuestDetailsModal
+          visible={isModalVisible}
+          guest={selectedGuest}
+          onClose={closeGuestModal}
+          onUpdate={handleUpdateGuest}
+          onDelete={handleDeleteGuest}
+        />
+      )}
     </View>
   );
 };
@@ -126,12 +195,10 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   assistantContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    backgroundColor: '#e0e0e0',
     padding: 10,
     borderRadius: 8,
+    backgroundColor: '#e0e0e0',
+    marginBottom: 10,
   },
   assistantText: {
     fontSize: 16,

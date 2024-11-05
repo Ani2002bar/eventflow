@@ -13,7 +13,6 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Provider, Portal } from 'react-native-paper';
 import { DatePickerModal, TimePickerModal } from 'react-native-paper-dates';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
 import Header from '../components/Header';
 import GuestDetailsModal from '../components/GuestDetailsModal';
 
@@ -36,14 +35,13 @@ const ModificarEventoScreen: React.FC = () => {
 
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'ModificarEvento'>>();
-  const currentUser = auth().currentUser;
+  const { eventId } = route.params;
 
   useEffect(() => {
     const loadEventData = async () => {
       try {
-        const eventRef = firestore().collection('events').doc(route.params.eventId);
-        const eventDoc = await eventRef.get();
-
+        // Cargar datos del evento
+        const eventDoc = await firestore().collection('events').doc(eventId).get();
         if (eventDoc.exists) {
           const eventData = eventDoc.data();
           setDescription(eventData?.description || '');
@@ -51,15 +49,18 @@ const ModificarEventoScreen: React.FC = () => {
           setTime(new Date(eventData?.time));
           setLocation(eventData?.location || '');
           setObservations(eventData?.observations || '');
-          
-          // Cargar asistentes
-          const assistantsData = await eventRef.collection('assistants').get();
-          const assistantsList = assistantsData.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setAssistants(assistantsList);
         }
+
+        // Cargar invitados asociados al evento desde la colección `guests`
+        const guestsSnapshot = await firestore()
+          .collection('guests')
+          .where('eventId', '==', eventId) // Filtra los invitados por el eventId del evento actual
+          .get();
+        const guestsList = guestsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setAssistants(guestsList);
       } catch (error) {
         console.error('Error al cargar los datos del evento:', error);
         Alert.alert('Error', 'No se pudieron cargar los datos del evento.');
@@ -67,7 +68,7 @@ const ModificarEventoScreen: React.FC = () => {
     };
 
     loadEventData();
-  }, [route.params.eventId]);
+  }, [eventId]);
 
   const handleUpdateEvent = async () => {
     if (!description || !date || !time || !location || assistants.length === 0) {
@@ -76,13 +77,12 @@ const ModificarEventoScreen: React.FC = () => {
     }
 
     try {
-      await firestore().collection('events').doc(route.params.eventId).update({
+      await firestore().collection('events').doc(eventId).update({
         description,
         date: date.toISOString(),
         time: time.toISOString(),
         location,
         observations,
-        assistants: assistants.map((a) => a.nombre),
       });
       Alert.alert('Evento actualizado exitosamente!');
       navigation.goBack();
@@ -100,6 +100,32 @@ const ModificarEventoScreen: React.FC = () => {
   const closeGuestModal = () => {
     setSelectedGuest(null);
     setModalVisible(false);
+  };
+
+  const handleDeleteGuest = async (guestId: string) => {
+    try {
+      await firestore().collection('guests').doc(guestId).delete();
+      setAssistants((prevAssistants) => prevAssistants.filter((g) => g.id !== guestId));
+      Alert.alert('Invitado eliminado', 'El invitado ha sido eliminado exitosamente.');
+      closeGuestModal();
+    } catch (error) {
+      console.error('Error al eliminar el invitado:', error);
+      Alert.alert('Error', 'No se pudo eliminar el invitado.');
+    }
+  };
+
+  const handleUpdateGuest = async (updatedGuest: any) => {
+    try {
+      await firestore().collection('guests').doc(updatedGuest.id).update(updatedGuest);
+      setAssistants((prevAssistants) =>
+        prevAssistants.map((guest) => (guest.id === updatedGuest.id ? updatedGuest : guest))
+      );
+      Alert.alert('Invitado actualizado', 'Los detalles del invitado han sido actualizados.');
+      closeGuestModal();
+    } catch (error) {
+      console.error('Error al actualizar el invitado:', error);
+      Alert.alert('Error', 'No se pudo actualizar el invitado.');
+    }
   };
 
   return (
@@ -219,8 +245,8 @@ const ModificarEventoScreen: React.FC = () => {
           visible={isModalVisible}
           guest={selectedGuest}
           onClose={closeGuestModal}
-          onUpdate={(updatedGuest) => {}}
-          onDelete={(guestId) => {}}
+          onUpdate={handleUpdateGuest}
+          onDelete={handleDeleteGuest}
         />
       </View>
     </Provider>
@@ -278,7 +304,24 @@ const styles = StyleSheet.create({
   },
   addButton: {
     position: 'absolute',
-    bottom
-: 100, right: 20, backgroundColor: '#007bff', borderRadius: 50, padding: 15, }, createButton: { backgroundColor: '#28a745', padding: 15, borderRadius: 5, alignItems: 'center', marginTop: 20, }, createButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold', }, });
+    bottom: 70,
+    right: 20,
+    backgroundColor: '#007bff',
+    borderRadius: 50,
+    padding: 15,
+  },
+  createButton: {
+    backgroundColor: '#28a745',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  createButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
 
 export default ModificarEventoScreen;
