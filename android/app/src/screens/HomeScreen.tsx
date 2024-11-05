@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Picker } from '@react-native-picker/picker';
 import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
 import Header from '../components/Header';
 import { Menu, Provider } from 'react-native-paper';
 
@@ -22,6 +23,7 @@ interface Event {
   location: string;
   observations: string;
   assistants: string[];
+  userId?: string; // Hacemos el userId opcional para mantener compatibilidad
 }
 
 const HomeScreen: React.FC = () => {
@@ -31,17 +33,27 @@ const HomeScreen: React.FC = () => {
   const [visible, setVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const navigation = useNavigation();
+  const currentUser = auth().currentUser;
 
   const openMenu = () => setVisible(true);
   const closeMenu = () => setVisible(false);
 
   const fetchEvents = async () => {
     try {
+      if (!currentUser) return;
+
       const eventsList: Event[] = [];
+      // Obtenemos todos los eventos
       const querySnapshot = await firestore().collection('events').get();
+      
       querySnapshot.forEach((doc) => {
-        eventsList.push({ id: doc.id, ...doc.data() } as Event);
+        const eventData = { id: doc.id, ...doc.data() } as Event;
+        // Solo agregamos el evento si pertenece al usuario actual o no tiene userId
+        if (eventData.userId === currentUser.uid) {
+          eventsList.push(eventData);
+        }
       });
+      
       setEvents(eventsList);
     } catch (error) {
       console.error("Error al cargar eventos:", error);
@@ -59,15 +71,25 @@ const HomeScreen: React.FC = () => {
   }, [navigation]);
 
   const handleModifyEvent = (event: Event) => {
-    setSelectedEvent(event);
-    closeMenu();
-    navigation.navigate('ModificarEventoScreen', { eventId: event.id });
+    // Solo permitir modificar si el evento pertenece al usuario actual
+    if (event.userId && event.userId === currentUser?.uid) {
+      setSelectedEvent(event);
+      closeMenu();
+      navigation.navigate('ModificarEventoScreen', { eventId: event.id });
+    } else {
+      console.log("No tienes permiso para modificar este evento");
+    }
   };
 
   const handleDeleteEvent = async (event: Event) => {
     try {
-      await firestore().collection('events').doc(event.id).delete();
-      setEvents(events.filter(e => e.id !== event.id));
+      // Solo permitir eliminar si el evento pertenece al usuario actual
+      if (event.userId && event.userId === currentUser?.uid) {
+        await firestore().collection('events').doc(event.id).delete();
+        setEvents(events.filter(e => e.id !== event.id));
+      } else {
+        console.log("No tienes permiso para eliminar este evento");
+      }
     } catch (error) {
       console.error("Error al eliminar evento:", error);
     } finally {
@@ -75,6 +97,14 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  
+  const filteredEvents = events.filter((event) => {
+    const eventMonth = new Date(event.date).getMonth() + 1;
+    return (selectedMonth === '' || eventMonth === parseInt(selectedMonth)) &&
+           (search === '' || event.description.toLowerCase().includes(search.toLowerCase()));
+  });
+
+  // El resto del código permanece igual
   const renderEventItem = ({ item }: { item: Event }) => {
     const eventDate = new Date(item.date);
     const eventTime = new Date(item.time);
@@ -84,6 +114,9 @@ const HomeScreen: React.FC = () => {
       day: 'numeric'
     });
     const formattedTime = `${eventTime.getHours()}:${eventTime.getMinutes().toString().padStart(2, '0')}`;
+
+    // Solo mostrar el menú de opciones si el evento pertenece al usuario actual
+    const canModify = item.userId === currentUser?.uid;
 
     return (
       <TouchableOpacity style={styles.eventCard} onPress={() => navigation.navigate('EventDetailScreen', { eventId: item.id })}>
@@ -96,30 +129,27 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.eventDate}>Fecha: {formattedDate}</Text>
           <Text style={styles.eventTime}>Hora: {formattedTime}</Text>
         </View>
-        <Menu
-          visible={visible && selectedEvent?.id === item.id}
-          onDismiss={closeMenu}
-          anchor={
-            <TouchableOpacity onPress={() => {
-              setSelectedEvent(item);
-              openMenu();
-            }}>
-              <Icon name="ellipsis-horizontal" size={20} color="#333" />
-            </TouchableOpacity>
-          }
-        >
-          <Menu.Item onPress={() => handleModifyEvent(item)} title="Modificar" />
-          <Menu.Item onPress={() => handleDeleteEvent(item)} title="Eliminar" />
-        </Menu>
+        {canModify && (
+          <Menu
+            visible={visible && selectedEvent?.id === item.id}
+            onDismiss={closeMenu}
+            anchor={
+              <TouchableOpacity onPress={() => {
+                setSelectedEvent(item);
+                openMenu();
+              }}>
+                <Icon name="ellipsis-horizontal" size={20} color="#333" />
+              </TouchableOpacity>
+            }
+          >
+            <Menu.Item onPress={() => handleModifyEvent(item)} title="Modificar" />
+            <Menu.Item onPress={() => handleDeleteEvent(item)} title="Eliminar" />
+          </Menu>
+        )}
       </TouchableOpacity>
     );
   };
 
-  const filteredEvents = events.filter((event) => {
-    const eventMonth = new Date(event.date).getMonth() + 1;
-    return (selectedMonth === '' || eventMonth === parseInt(selectedMonth)) &&
-           (search === '' || event.description.toLowerCase().includes(search.toLowerCase()));
-  });
 
   return (
     <Provider>

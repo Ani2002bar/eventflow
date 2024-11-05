@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Provider, Portal } from 'react-native-paper';
 import { DatePickerModal, TimePickerModal } from 'react-native-paper-dates';
 import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
 import Header from '../components/Header';
 
 type RootStackParamList = {
@@ -62,32 +64,51 @@ const RegistroEventosScreen: React.FC = () => {
   };
 
   const handleCreateEvent = async () => {
-    if (!description || !date || !time || !location) {
-      alert("Por favor completa todos los campos.");
+    const currentUser = auth().currentUser;
+
+    if (!currentUser) {
+      Alert.alert("Error", "Debes estar autenticado para crear eventos.");
       return;
     }
 
-    // Crear un objeto de evento
-    const newEvent = {
-      description,
-      date: date.toISOString(),
-      time: time.toISOString(),
-      location,
-      observations,
-      assistants,
-    };
+    if (!description || !date || !time || !location) {
+      Alert.alert("Error", "Por favor completa todos los campos.");
+      return;
+    }
 
     try {
-      // Guardar el evento en Firestore
+      // Crear el evento con el userId
+      const newEvent = {
+        description,
+        date: date.toISOString(),
+        time: time.toISOString(),
+        location,
+        observations,
+        assistants,
+        userId: currentUser.uid,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+      };
+
+      // Intentar crear el evento
       await firestore().collection('events').add(newEvent);
-      alert("Evento creado exitosamente!");
-      navigation.goBack();
+      Alert.alert("Éxito", "Evento creado exitosamente!", [
+        { text: "OK", onPress: () => navigation.goBack() }
+      ]);
     } catch (error) {
-      console.error("Error al crear el evento: ", error);
-      alert("Hubo un error al crear el evento. Inténtalo nuevamente.");
+      console.error("Error al crear el evento:", error);
+      Alert.alert("Error", "Hubo un error al crear el evento. Por favor, inténtalo nuevamente.");
     }
   };
 
+ // Verificar autenticación al montar el componente
+ useEffect(() => {
+  const currentUser = auth().currentUser;
+  if (!currentUser) {
+    Alert.alert("Error", "Debes iniciar sesión para crear eventos", [
+      { text: "OK", onPress: () => navigation.goBack() }
+    ]);
+  }
+}, []);
   return (
     <Provider>
       <View style={styles.container}>
