@@ -20,30 +20,47 @@ const InvitadoNuevoScreen: React.FC = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'InvitadoNuevoScreen'>>();
 
   const handleAddGuest = async () => {
-    if (nombre.trim() && edad.trim() && sexo.trim() && telefono.trim()) {
-      try {
-        const newGuest = {
-          nombre,
-          edad,
-          sexo,
-          telefono,
-          eventId: route.params?.eventId || null, // Usa null si eventId es undefined
-        };
-        const guestRef = await firestore().collection('guests').add(newGuest);
-        const guestData = { id: guestRef.id, ...newGuest };
-
-        if (route.params?.onGuestAdded) {
-          route.params.onGuestAdded(guestData);
-          navigation.goBack();
-        } else {
-          navigation.navigate('RegistroEventosScreen', { newGuest: guestData });
-        }
-      } catch (error) {
-        console.error("Error al agregar el invitado:", error);
-        Alert.alert('Error', 'No se pudo agregar el invitado. Inténtalo nuevamente.');
-      }
-    } else {
+    // Validación para verificar si todos los campos están completos
+    if (!nombre.trim() || !edad.trim() || !sexo.trim() || !telefono.trim()) {
       Alert.alert('Error', 'Por favor, completa todos los campos.');
+      return;
+    }
+
+    // Validación para asegurarse de que la edad tenga un máximo de 2 dígitos
+    if (edad.length > 2) {
+      Alert.alert('Error', 'La edad no puede tener más de dos dígitos.');
+      return;
+    }
+
+    try {
+      const newGuest = {
+        nombre,
+        edad,
+        sexo,
+        telefono,
+        eventId: route.params?.eventId || null, // Usa null si eventId es undefined
+      };
+      const guestRef = await firestore().collection('guests').add(newGuest);
+      const guestData = { id: guestRef.id, ...newGuest };
+
+      if (route.params?.onGuestAdded) {
+        route.params.onGuestAdded(guestData);
+        navigation.goBack();
+      } else {
+        navigation.navigate('RegistroEventosScreen', { newGuest: guestData });
+      }
+    } catch (error) {
+      console.error("Error al agregar el invitado:", error);
+      Alert.alert('Error', 'No se pudo agregar el invitado. Inténtalo nuevamente.');
+    }
+  };
+
+  // Función para actualizar la edad y limitarla a un máximo de 2 dígitos
+  const handleAgeChange = (text: string) => {
+    if (/^\d{0,2}$/.test(text)) {
+      setEdad(text);
+    } else {
+      Alert.alert('Error', 'La edad solo puede contener un máximo de dos dígitos.');
     }
   };
 
@@ -65,7 +82,7 @@ const InvitadoNuevoScreen: React.FC = () => {
           placeholder="Edad"
           keyboardType="numeric"
           value={edad}
-          onChangeText={setEdad}
+          onChangeText={handleAgeChange}
         />
 
         <View style={styles.pickerContainer}>

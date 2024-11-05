@@ -11,7 +11,6 @@ import MyButton from '../components/MyButton';
 import MyTextInput from '../components/MyTextInput';
 import auth from '@react-native-firebase/auth';
 
-// Define navigation types
 type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
@@ -30,16 +29,36 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
 
-  const signUpTestFn = () => {
+  const validateInputs = (): boolean => {
+    // Verificar si hay campos vacíos
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Por favor, llena todos los campos');
-      return;
+      return false;
     }
-    
+
+    // Validar formato del correo
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Error', 'Por favor, ingresa un correo electrónico válido');
+      return false;
+    }
+
+    // Validar la longitud y seguridad de la contraseña
+    if (password.length < 6) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      return false;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Las contraseñas no coinciden');
-      return;
+      return false;
     }
+
+    return true;
+  };
+
+  const signUp = () => {
+    if (!validateInputs()) return;
 
     auth()
       .createUserWithEmailAndPassword(email, password)
@@ -57,7 +76,7 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
       })
       .catch(error => {
         let errorMessage = 'Ocurrió un error al registrarse';
-        
+
         switch (error.code) {
           case 'auth/email-already-in-use':
             errorMessage = '¡Ese correo electrónico ya está en uso!';
@@ -68,8 +87,11 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
           case 'auth/weak-password':
             errorMessage = '¡Por favor, utiliza una contraseña más fuerte!';
             break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Error de conexión. Verifica tu conexión a internet e intenta nuevamente.';
+            break;
         }
-        
+
         console.log('Error details:', error);
         Alert.alert('Error', errorMessage);
       });
@@ -114,7 +136,7 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
           secureTextEntry
         />
 
-        <MyButton onPress={signUpTestFn} title="Unirme" />
+        <MyButton onPress={signUp} title="Unirme" />
       </View>
     </View>
   );

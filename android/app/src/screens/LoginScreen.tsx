@@ -234,6 +234,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 10,
     marginBottom: 20,
+    textDecorationLine: 'underline', // Subrayado para que parezca presionable
   },
   noAccount: {
     textAlign: 'center',

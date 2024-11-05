@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -79,6 +80,17 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  const confirmDeleteEvent = (event: Event) => {
+    Alert.alert(
+      'Confirmación',
+      '¿Estás seguro de que deseas eliminar este evento?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Eliminar', style: 'destructive', onPress: () => handleDeleteEvent(event) },
+      ]
+    );
+  };
+
   const handleDeleteEvent = async (event: Event) => {
     try {
       if (event.userId && event.userId === currentUser?.uid) {
@@ -137,7 +149,7 @@ const HomeScreen: React.FC = () => {
             }
           >
             <Menu.Item onPress={() => handleModifyEvent(item)} title="Modificar" />
-            <Menu.Item onPress={() => handleDeleteEvent(item)} title="Eliminar" />
+            <Menu.Item onPress={() => confirmDeleteEvent(item)} title="Eliminar" />
           </Menu>
         )}
       </TouchableOpacity>
