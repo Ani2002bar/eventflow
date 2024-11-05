@@ -9,6 +9,7 @@ import InvitadoNuevoScreen from '../screens/InvitadoNuevoScreen';
 import EventDetailScreen from '../screens/EventDetailScreen';
 import RecoverPasswordScreen from '../screens/RecoverPasswordScreen';
 import ModificarEventoScreen from '../screens/ModificarEventoScreen';
+import UserProfileScreen from '../screens/UserProfileScreen';
 
 
 
@@ -27,6 +28,7 @@ export default function MyStack() {
       <Stack.Screen name="EventDetailScreen" component={EventDetailScreen} />
       <Stack.Screen name="RecoverPassword" component={RecoverPasswordScreen} />
       <Stack.Screen name="ModificarEventoScreen" component={ModificarEventoScreen} />
+      <Stack.Screen name="UserProfileScreen" component={UserProfileScreen} />
    
 
     </Stack.Navigator>
