@@ -1,3 +1,4 @@
+// screens/RegistroEventosScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,8 +14,8 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Provider, Portal } from 'react-native-paper';
 import { DatePickerModal, TimePickerModal } from 'react-native-paper-dates';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
 import Header from '../components/Header';
+import GuestDetailsModal from '../components/GuestDetailsModal';
 
 type RootStackParamList = {
   RegistroEventos: { newGuest?: { nombre: string } };
@@ -29,26 +30,37 @@ const RegistroEventosScreen: React.FC = () => {
   const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
   const [location, setLocation] = useState('');
   const [observations, setObservations] = useState('');
-  const [assistants, setAssistants] = useState<string[]>(['Ana Barreto', 'Matías Garay']);
+  const [assistants, setAssistants] = useState<any[]>([]);
+  const [selectedGuest, setSelectedGuest] = useState<any>(null);
+  const [isModalVisible, setModalVisible] = useState(false);
 
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'RegistroEventos'>>();
 
   useEffect(() => {
+    const fetchGuests = async () => {
+      try {
+        const snapshot = await firestore().collection('guests').get();
+        const guests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAssistants(guests);
+      } catch (error) {
+        console.error("Error al cargar los invitados: ", error);
+      }
+    };
+
+    fetchGuests();
+  }, []);
+
+  useEffect(() => {
     if (route.params?.newGuest) {
       const { newGuest } = route.params;
-      setAssistants((prevAssistants) => [...prevAssistants, newGuest.nombre]);
+      setAssistants((prevAssistants) => [...prevAssistants, newGuest]);
       navigation.setParams({ newGuest: undefined });
     }
   }, [route.params?.newGuest, navigation]);
 
-  const handleDatePress = () => {
-    setDatePickerVisibility(true);
-  };
-
-  const handleTimePress = () => {
-    setTimePickerVisibility(true);
-  };
+  const handleDatePress = () => setDatePickerVisibility(true);
+  const handleTimePress = () => setTimePickerVisibility(true);
 
   const onDateConfirm = (params: { date: Date }) => {
     setDate(params.date);
@@ -64,51 +76,66 @@ const RegistroEventosScreen: React.FC = () => {
   };
 
   const handleCreateEvent = async () => {
-    const currentUser = auth().currentUser;
-
-    if (!currentUser) {
-      Alert.alert("Error", "Debes estar autenticado para crear eventos.");
-      return;
-    }
-
     if (!description || !date || !time || !location) {
-      Alert.alert("Error", "Por favor completa todos los campos.");
+      Alert.alert("Por favor completa todos los campos.");
       return;
     }
+
+    const newEvent = {
+      description,
+      date: date.toISOString(),
+      time: time.toISOString(),
+      location,
+      observations,
+      assistants: assistants.map(a => a.nombre),
+    };
 
     try {
-      // Crear el evento con el userId
-      const newEvent = {
-        description,
-        date: date.toISOString(),
-        time: time.toISOString(),
-        location,
-        observations,
-        assistants,
-        userId: currentUser.uid,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-      };
-
-      // Intentar crear el evento
       await firestore().collection('events').add(newEvent);
-      Alert.alert("Éxito", "Evento creado exitosamente!", [
-        { text: "OK", onPress: () => navigation.goBack() }
-      ]);
+      Alert.alert("Evento creado exitosamente!");
+      navigation.goBack();
     } catch (error) {
-      console.error("Error al crear el evento:", error);
-      Alert.alert("Error", "Hubo un error al crear el evento. Por favor, inténtalo nuevamente.");
+      console.error("Error al crear el evento: ", error);
+      Alert.alert("Hubo un error al crear el evento. Inténtalo nuevamente.");
     }
   };
 
- // Verificar autenticación al montar el componente
- useEffect(() => {
-  const currentUser = auth().currentUser;
-  if (!currentUser) {
-    Alert.alert("Error", "Debes iniciar sesión para crear eventos", [
-      { text: "OK", onPress: () => navigation.goBack() }
-    ]);
-  }
-}, []);
+  const openGuestModal = (guest: any) => {
+    setSelectedGuest(guest);
+    setModalVisible(true);
+  };
+
+  const closeGuestModal = () => {
+    setSelectedGuest(null);
+    setModalVisible(false);
+  };
+
+  const handleDeleteGuest = async (guestId: string) => {
+    try {
+      await firestore().collection('guests').doc(guestId).delete();
+      setAssistants((prevAssistants) => prevAssistants.filter(g => g.id !== guestId));
+      Alert.alert("Invitado eliminado", "El invitado ha sido eliminado exitosamente.");
+      closeGuestModal();
+    } catch (error) {
+      console.error("Error al eliminar el invitado: ", error);
+      Alert.alert("Error", "No se pudo eliminar el invitado.");
+    }
+  };
+
+  const handleUpdateGuest = async (updatedGuest: any) => {
+    try {
+      await firestore().collection('guests').doc(updatedGuest.id).update(updatedGuest);
+      setAssistants((prevAssistants) =>
+        prevAssistants.map(guest => guest.id === updatedGuest.id ? updatedGuest : guest)
+      );
+      Alert.alert("Invitado actualizado", "Los detalles del invitado han sido actualizados.");
+      closeGuestModal();
+    } catch (error) {
+      console.error("Error al actualizar el invitado: ", error);
+      Alert.alert("Error", "No se pudo actualizar el invitado.");
+    }
+  };
+
   return (
     <Provider>
       <View style={styles.container}>
@@ -153,7 +180,6 @@ const RegistroEventosScreen: React.FC = () => {
             saveLabel="Aceptar"
             label="Selecciona la fecha"
             animationType="slide"
-            theme={{ colors: { primary: '#6200EA' } }}
           />
 
           <TimePickerModal
@@ -166,7 +192,6 @@ const RegistroEventosScreen: React.FC = () => {
             cancelLabel="Cancelar"
             confirmLabel="Aceptar"
             animationType="slide"
-            theme={{ colors: { primary: '#6200EA' } }}
           />
         </Portal>
 
@@ -190,14 +215,14 @@ const RegistroEventosScreen: React.FC = () => {
           <Text style={styles.label}>Asistentes</Text>
           <FlatList
             data={assistants}
-            keyExtractor={(item, index) => index.toString()}
+            keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <View style={styles.assistantContainer}>
-                <Text style={styles.assistantText}>{item}</Text>
-                <TouchableOpacity onPress={() => setAssistants(assistants.filter(a => a !== item))}>
-                  <Text style={styles.removeText}>Eliminar</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity onPress={() => openGuestModal(item)}>
+                <View style={styles.assistantContainer}>
+                  <Text style={styles.assistantText}>{item.nombre}</Text>
+                  <Text style={styles.detailsText}>Detalles</Text>
+                </View>
+              </TouchableOpacity>
             )}
           />
           <TouchableOpacity onPress={() => navigation.navigate('InvitadoNuevo')} style={styles.addButton}>
@@ -208,6 +233,14 @@ const RegistroEventosScreen: React.FC = () => {
         <TouchableOpacity style={styles.createButton} onPress={handleCreateEvent}>
           <Text style={styles.createButtonText}>CREAR EVENTO</Text>
         </TouchableOpacity>
+
+        <GuestDetailsModal
+          visible={isModalVisible}
+          guest={selectedGuest}
+          onClose={closeGuestModal}
+          onUpdate={handleUpdateGuest}
+          onDelete={handleDeleteGuest}
+        />
       </View>
     </Provider>
   );
@@ -217,60 +250,54 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: '#f8f9fa',
   },
   label: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    marginVertical: 5,
   },
   input: {
-    backgroundColor: '#f4f4f4',
+    borderWidth: 1,
+    borderColor: '#ddd',
     padding: 10,
-    borderRadius: 8,
-    marginBottom: 15,
-    fontSize: 16,
+    borderRadius: 5,
+    marginBottom: 10,
+    backgroundColor: '#fff',
   },
   assistantsSection: {
-    backgroundColor: '#f0f0f5',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
+    marginVertical: 15,
   },
   assistantContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    backgroundColor: '#e0e0e0',
-    padding: 10,
-    borderRadius: 8,
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
   },
   assistantText: {
     fontSize: 16,
-    color: '#333',
   },
-  removeText: {
-    color: '#ff0000',
-    fontWeight: 'bold',
+  detailsText: {
+    color: '#007bff',
+    fontSize: 14,
   },
   addButton: {
-    backgroundColor: '#6200EA',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: '#007bff',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginTop: 10,
+    padding: 10,
+    borderRadius: 50,
+    width: 50,
+    alignSelf: 'flex-end',
   },
   createButton: {
-    backgroundColor: '#6200EA',
+    backgroundColor: '#28a745',
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 5,
     alignItems: 'center',
   },
   createButtonText: {
-    color: 'white',
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },

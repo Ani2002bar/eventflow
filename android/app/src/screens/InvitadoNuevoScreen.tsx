@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
-import Header from '../components/Header'; // Importa el encabezado
+import firestore from '@react-native-firebase/firestore';
+import Header from '../components/Header';
 
 const InvitadoNuevoScreen: React.FC = () => {
   const [nombre, setNombre] = useState('');
@@ -11,11 +12,20 @@ const InvitadoNuevoScreen: React.FC = () => {
   const [telefono, setTelefono] = useState('');
   const navigation = useNavigation();
 
-  const handleAddGuest = () => {
+  const handleAddGuest = async () => {
     if (nombre.trim() && edad.trim() && sexo.trim() && telefono.trim()) {
-      navigation.navigate('RegistroEventos', {
-        newGuest: { nombre, edad, sexo, telefono }
-      });
+      try {
+        const newGuest = { nombre, edad, sexo, telefono };
+        
+        // Guardar el invitado en Firebase
+        const guestRef = await firestore().collection('guests').add(newGuest);
+        
+        // Navegar de regreso a RegistroEventosScreen con el invitado recién creado
+        navigation.navigate('RegistroEventosScreen', { newGuest: { id: guestRef.id, ...newGuest } });
+      } catch (error) {
+        console.error("Error al agregar el invitado:", error);
+        Alert.alert('Error', 'No se pudo agregar el invitado. Inténtalo nuevamente.');
+      }
     } else {
       Alert.alert('Error', 'Por favor, completa todos los campos.');
     }
@@ -23,9 +33,7 @@ const InvitadoNuevoScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Encabezado */}
       <Header />
-
       <View style={styles.formContainer}>
         <Text style={styles.title}>Invitado Nuevo</Text>
 
@@ -44,7 +52,6 @@ const InvitadoNuevoScreen: React.FC = () => {
           onChangeText={setEdad}
         />
 
-        {/* Selector de Sexo */}
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={sexo}
@@ -81,7 +88,7 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
-    justifyContent: 'center', // Centra el contenido verticalmente
+    justifyContent: 'center',
     padding: 20,
   },
   title: {
