@@ -12,6 +12,7 @@ import ModificarEventoScreen from '../screens/ModificarEventoScreen';
 
 
 
+
 const Stack = createStackNavigator();
 
 export default function MyStack() {
@@ -26,7 +27,7 @@ export default function MyStack() {
       <Stack.Screen name="EventDetailScreen" component={EventDetailScreen} />
       <Stack.Screen name="RecoverPassword" component={RecoverPasswordScreen} />
       <Stack.Screen name="ModificarEventoScreen" component={ModificarEventoScreen} />
-
+   
 
     </Stack.Navigator>
   );
