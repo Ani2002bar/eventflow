@@ -39,14 +39,11 @@ const UserProfileScreen = () => {
       </View>
 
       {/* Botones */}
-      <TouchableOpacity style={styles.button} onPress={() => alert("Edit Profile Pressed")}>
-        <Text style={styles.buttonText}>Edit Profile</Text>
-      </TouchableOpacity>
       <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleSignOut}>
-        <Text style={styles.buttonText}>Log Out</Text>
+        <Text style={styles.buttonText}>Cerrar Sesión</Text>
       </TouchableOpacity>
       <TouchableOpacity style={[styles.button, styles.homeButton]} onPress={handleGoHome}>
-        <Text style={styles.buttonText}>Go to Home</Text>
+        <Text style={styles.buttonText}>Ir a Menú Principal</Text>
       </TouchableOpacity>
     </View>
   );
