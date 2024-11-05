@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
 import firestore from '@react-native-firebase/firestore';
 import Header from '../components/Header';
+
+type RootStackParamList = {
+  RegistroEventosScreen: { newGuest: any };
+  ModificarEventoScreen: { newGuest: any };
+  InvitadoNuevoScreen: { eventId: string, onGuestAdded: (guest: any) => void };
+};
 
 const InvitadoNuevoScreen: React.FC = () => {
   const [nombre, setNombre] = useState('');
@@ -11,17 +17,22 @@ const InvitadoNuevoScreen: React.FC = () => {
   const [sexo, setSexo] = useState('');
   const [telefono, setTelefono] = useState('');
   const navigation = useNavigation();
+  const route = useRoute<RouteProp<RootStackParamList, 'InvitadoNuevoScreen'>>();
 
   const handleAddGuest = async () => {
     if (nombre.trim() && edad.trim() && sexo.trim() && telefono.trim()) {
       try {
-        const newGuest = { nombre, edad, sexo, telefono };
-        
-        // Guardar el invitado en Firebase
+        const newGuest = { nombre, edad, sexo, telefono, eventId: route.params.eventId };
         const guestRef = await firestore().collection('guests').add(newGuest);
-        
-        // Navegar de regreso a RegistroEventosScreen con el invitado recién creado
-        navigation.navigate('RegistroEventosScreen', { newGuest: { id: guestRef.id, ...newGuest } });
+
+        const guestData = { id: guestRef.id, ...newGuest };
+
+        if (route.params?.onGuestAdded) {
+          route.params.onGuestAdded(guestData);
+          navigation.goBack();
+        } else {
+          navigation.navigate('RegistroEventosScreen', { newGuest: guestData });
+        }
       } catch (error) {
         console.error("Error al agregar el invitado:", error);
         Alert.alert('Error', 'No se pudo agregar el invitado. Inténtalo nuevamente.');

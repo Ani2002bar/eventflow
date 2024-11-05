@@ -18,7 +18,7 @@ import GuestDetailsModal from '../components/GuestDetailsModal';
 
 type RootStackParamList = {
   ModificarEvento: { eventId: string };
-  InvitadoNuevo: undefined;
+  InvitadoNuevo: { eventId: string, onGuestAdded: (guest: any) => void };
 };
 
 const ModificarEventoScreen: React.FC = () => {
@@ -40,7 +40,6 @@ const ModificarEventoScreen: React.FC = () => {
   useEffect(() => {
     const loadEventData = async () => {
       try {
-        // Cargar datos del evento
         const eventDoc = await firestore().collection('events').doc(eventId).get();
         if (eventDoc.exists) {
           const eventData = eventDoc.data();
@@ -51,10 +50,9 @@ const ModificarEventoScreen: React.FC = () => {
           setObservations(eventData?.observations || '');
         }
 
-        // Cargar invitados asociados al evento desde la colección `guests`
         const guestsSnapshot = await firestore()
           .collection('guests')
-          .where('eventId', '==', eventId) // Filtra los invitados por el eventId del evento actual
+          .where('eventId', '==', eventId)
           .get();
         const guestsList = guestsSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -126,6 +124,13 @@ const ModificarEventoScreen: React.FC = () => {
       console.error('Error al actualizar el invitado:', error);
       Alert.alert('Error', 'No se pudo actualizar el invitado.');
     }
+  };
+
+  const navigateToAddGuest = () => {
+    navigation.navigate('InvitadoNuevo', {
+      eventId,
+      onGuestAdded: (newGuest: any) => setAssistants([...assistants, newGuest]),
+    });
   };
 
   return (
@@ -233,7 +238,7 @@ const ModificarEventoScreen: React.FC = () => {
           )}
         </View>
 
-        <TouchableOpacity onPress={() => navigation.navigate('InvitadoNuevo')} style={styles.addButton}>
+        <TouchableOpacity onPress={navigateToAddGuest} style={styles.addButton}>
           <Icon name="add" size={24} color="#fff" />
         </TouchableOpacity>
 
