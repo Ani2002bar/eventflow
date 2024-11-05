@@ -9,23 +9,11 @@ import InvitadoNuevoScreen from '../screens/InvitadoNuevoScreen';
 import EventDetailScreen from '../screens/EventDetailScreen';
 import RecoverPasswordScreen from '../screens/RecoverPasswordScreen';
 import ModificarEventoScreen from '../screens/ModificarEventoScreen';
-import UserProfileScreen from '../screens/UserProfileScreen';
 
-// Define el tipo para las rutas y sus parámetros
-export type RootStackParamList = {
-  Login: undefined;
-  HomeScreen: undefined;
-  SignUp: undefined;
-  AddFoodOrCategory: undefined;
-  RegistroEventosScreen: undefined;
-  InvitadoNuevo: undefined;
-  EventDetailScreen: undefined;
-  RecoverPassword: undefined;
-  ModificarEvento: { eventId: string }; // Define el tipo de parámetro `eventId`
-  UserProfileScreen: undefined;
-};
 
-const Stack = createStackNavigator<RootStackParamList>();
+
+
+const Stack = createStackNavigator();
 
 export default function MyStack() {
   return (
@@ -38,8 +26,9 @@ export default function MyStack() {
       <Stack.Screen name="InvitadoNuevo" component={InvitadoNuevoScreen} />
       <Stack.Screen name="EventDetailScreen" component={EventDetailScreen} />
       <Stack.Screen name="RecoverPassword" component={RecoverPasswordScreen} />
-      <Stack.Screen name="ModificarEvento" component={ModificarEventoScreen} />
-      <Stack.Screen name="UserProfileScreen" component={UserProfileScreen} />
+      <Stack.Screen name="ModificarEventoScreen" component={ModificarEventoScreen} />
+   
+
     </Stack.Navigator>
   );
 }
