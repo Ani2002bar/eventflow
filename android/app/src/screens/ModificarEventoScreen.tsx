@@ -127,7 +127,7 @@ const ModificarEventoScreen: React.FC = () => {
   };
 
   const navigateToAddGuest = () => {
-    navigation.navigate('InvitadoNuevo', {
+    navigation.navigate('InvitadoNuevoScreen', {
       eventId,
       onGuestAdded: (newGuest: any) => setAssistants([...assistants, newGuest]),
     });

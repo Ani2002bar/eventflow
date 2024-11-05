@@ -8,7 +8,7 @@ import Header from '../components/Header';
 type RootStackParamList = {
   RegistroEventosScreen: { newGuest: any };
   ModificarEventoScreen: { newGuest: any };
-  InvitadoNuevoScreen: { eventId: string, onGuestAdded: (guest: any) => void };
+  InvitadoNuevoScreen: { eventId?: string; onGuestAdded: (guest: any) => void };
 };
 
 const InvitadoNuevoScreen: React.FC = () => {
@@ -22,9 +22,14 @@ const InvitadoNuevoScreen: React.FC = () => {
   const handleAddGuest = async () => {
     if (nombre.trim() && edad.trim() && sexo.trim() && telefono.trim()) {
       try {
-        const newGuest = { nombre, edad, sexo, telefono, eventId: route.params.eventId };
+        const newGuest = {
+          nombre,
+          edad,
+          sexo,
+          telefono,
+          eventId: route.params?.eventId || null, // Usa null si eventId es undefined
+        };
         const guestRef = await firestore().collection('guests').add(newGuest);
-
         const guestData = { id: guestRef.id, ...newGuest };
 
         if (route.params?.onGuestAdded) {

@@ -18,8 +18,8 @@ import Header from '../components/Header';
 import GuestDetailsModal from '../components/GuestDetailsModal';
 
 type RootStackParamList = {
-  RegistroEventos: { newGuest?: { nombre: string; edad: string; sexo: string; telefono: string; id: string } };
-  InvitadoNuevo: undefined;
+  RegistroEventosScreen: { newGuest?: { nombre: string; edad: string; sexo: string; telefono: string; id: string } };
+  InvitadoNuevoScreen: { eventId?: string; onGuestAdded: (guest: any) => void };
 };
 
 const RegistroEventosScreen: React.FC = () => {
@@ -35,12 +35,8 @@ const RegistroEventosScreen: React.FC = () => {
   const [isModalVisible, setModalVisible] = useState(false);
 
   const navigation = useNavigation();
-  const route = useRoute<RouteProp<RootStackParamList, 'RegistroEventos'>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'RegistroEventosScreen'>>();
   const currentUser = auth().currentUser;
-
-  useEffect(() => {
-    setAssistants([]);
-  }, []);
 
   useEffect(() => {
     if (route.params?.newGuest) {
@@ -105,6 +101,13 @@ const RegistroEventosScreen: React.FC = () => {
       console.error('Error al crear el evento: ', error);
       Alert.alert('Hubo un error al crear el evento. Inténtalo nuevamente.');
     }
+  };
+
+  // Función para navegar a la pantalla de agregar invitado
+  const navigateToAddGuest = () => {
+    navigation.navigate('InvitadoNuevoScreen', {
+      onGuestAdded: (newGuest: any) => setAssistants((prevAssistants) => [...prevAssistants, newGuest]),
+    });
   };
 
   const openGuestModal = (guest: any) => {
@@ -239,7 +242,7 @@ const RegistroEventosScreen: React.FC = () => {
           )}
         </View>
 
-        <TouchableOpacity onPress={() => navigation.navigate('InvitadoNuevo')} style={styles.addButton}>
+        <TouchableOpacity onPress={navigateToAddGuest} style={styles.addButton}>
           <Icon name="add" size={24} color="#fff" />
         </TouchableOpacity>
 
