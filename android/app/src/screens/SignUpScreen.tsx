@@ -44,6 +44,14 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
     auth()
       .createUserWithEmailAndPassword(email, password)
       .then(() => {
+        const currentUser = auth().currentUser;
+        if (currentUser) {
+          return currentUser.updateProfile({
+            displayName: `${firstName} ${lastName}`, // Guarda nombre y apellido juntos
+          });
+        }
+      })
+      .then(() => {
         Alert.alert('Éxito', 'Usuario creado. Por favor inicia sesión.');
         navigation.navigate("Login");
       })

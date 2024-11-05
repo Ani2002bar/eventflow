@@ -38,7 +38,6 @@ const HomeScreen: React.FC = () => {
   const openMenu = () => setVisible(true);
   const closeMenu = () => setVisible(false);
 
-  // Función para cargar eventos del usuario autenticado
   const fetchEvents = async () => {
     try {
       if (!currentUser) return;
@@ -46,7 +45,7 @@ const HomeScreen: React.FC = () => {
       const eventsList: Event[] = [];
       const querySnapshot = await firestore()
         .collection('events')
-        .where('userId', '==', currentUser.uid) // Filtra por userId del usuario autenticado
+        .where('userId', '==', currentUser.uid)
         .get();
 
       querySnapshot.forEach((doc) => {
@@ -95,7 +94,6 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  // Filtrado de eventos basado en el mes seleccionado y búsqueda
   const filteredEvents = events.filter((event) => {
     const eventMonth = new Date(event.date).getMonth() + 1;
     return (selectedMonth === '' || eventMonth === parseInt(selectedMonth)) &&

@@ -41,9 +41,10 @@ const Header: React.FC = () => {
 
   const goToProfile = () => {
     closeMenu();
-    navigation.navigate('UserProfile');
+    console.log("Navegando a UserProfileScreen");
+    navigation.navigate('UserProfileScreen');
   };
-
+  
   return (
     <Provider>
       <View style={styles.header}>
