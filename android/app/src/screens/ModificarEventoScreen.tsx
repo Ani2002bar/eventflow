@@ -5,6 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Alert,
   FlatList,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -12,94 +13,93 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Provider, Portal } from 'react-native-paper';
 import { DatePickerModal, TimePickerModal } from 'react-native-paper-dates';
 import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
 import Header from '../components/Header';
+import GuestDetailsModal from '../components/GuestDetailsModal';
 
 type RootStackParamList = {
-  ModificarEventos: { eventId: string };
+  ModificarEvento: { eventId: string };
   InvitadoNuevo: undefined;
 };
 
-const ModificarEventosScreen: React.FC = () => {
+const ModificarEventoScreen: React.FC = () => {
   const [description, setDescription] = useState('');
   const [date, setDate] = useState<Date | null>(null);
   const [time, setTime] = useState<Date | null>(null);
-  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
   const [location, setLocation] = useState('');
   const [observations, setObservations] = useState('');
-  const [assistants, setAssistants] = useState<string[]>([]);
+  const [assistants, setAssistants] = useState<any[]>([]);
+  const [selectedGuest, setSelectedGuest] = useState<any>(null);
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
 
   const navigation = useNavigation();
-  const route = useRoute<RouteProp<RootStackParamList, 'ModificarEventos'>>();
-  const { eventId } = route.params;
+  const route = useRoute<RouteProp<RootStackParamList, 'ModificarEvento'>>();
+  const currentUser = auth().currentUser;
 
-  // Cargar los datos del evento cuando se monta el componente
   useEffect(() => {
     const loadEventData = async () => {
       try {
-        const eventDoc = await firestore().collection('events').doc(eventId).get();
+        const eventRef = firestore().collection('events').doc(route.params.eventId);
+        const eventDoc = await eventRef.get();
+
         if (eventDoc.exists) {
           const eventData = eventDoc.data();
           setDescription(eventData?.description || '');
-          setDate(eventData?.date ? new Date(eventData.date) : null);
-          setTime(eventData?.time ? new Date(eventData.time) : null);
+          setDate(new Date(eventData?.date));
+          setTime(new Date(eventData?.time));
           setLocation(eventData?.location || '');
           setObservations(eventData?.observations || '');
-          setAssistants(eventData?.assistants || []);
+          
+          // Cargar asistentes
+          const assistantsData = await eventRef.collection('assistants').get();
+          const assistantsList = assistantsData.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setAssistants(assistantsList);
         }
       } catch (error) {
-        console.error("Error al cargar el evento: ", error);
-        alert("Hubo un error al cargar el evento.");
+        console.error('Error al cargar los datos del evento:', error);
+        Alert.alert('Error', 'No se pudieron cargar los datos del evento.');
       }
     };
 
     loadEventData();
-  }, [eventId]);
-
-  const handleDatePress = () => {
-    setDatePickerVisibility(true);
-  };
-
-  const handleTimePress = () => {
-    setTimePickerVisibility(true);
-  };
-
-  const onDateConfirm = (params: { date: Date }) => {
-    setDate(params.date);
-    setDatePickerVisibility(false);
-  };
-
-  const onTimeConfirm = (params: { hours: number; minutes: number }) => {
-    const selectedTime = new Date();
-    selectedTime.setHours(params.hours);
-    selectedTime.setMinutes(params.minutes);
-    setTime(selectedTime);
-    setTimePickerVisibility(false);
-  };
+  }, [route.params.eventId]);
 
   const handleUpdateEvent = async () => {
-    if (!description || !date || !time || !location) {
-      alert("Por favor completa todos los campos.");
+    if (!description || !date || !time || !location || assistants.length === 0) {
+      Alert.alert('Por favor completa todos los campos y añade al menos un invitado.');
       return;
     }
 
-    const updatedEvent = {
-      description,
-      date: date.toISOString(),
-      time: time.toISOString(),
-      location,
-      observations,
-      assistants,
-    };
-
     try {
-      await firestore().collection('events').doc(eventId).update(updatedEvent);
-      alert("Evento actualizado exitosamente!");
+      await firestore().collection('events').doc(route.params.eventId).update({
+        description,
+        date: date.toISOString(),
+        time: time.toISOString(),
+        location,
+        observations,
+        assistants: assistants.map((a) => a.nombre),
+      });
+      Alert.alert('Evento actualizado exitosamente!');
       navigation.goBack();
     } catch (error) {
-      console.error("Error al actualizar el evento: ", error);
-      alert("Hubo un error al actualizar el evento. Inténtalo nuevamente.");
+      console.error('Error al actualizar el evento:', error);
+      Alert.alert('Error', 'Hubo un problema al actualizar el evento.');
     }
+  };
+
+  const openGuestModal = (guest: any) => {
+    setSelectedGuest(guest);
+    setModalVisible(true);
+  };
+
+  const closeGuestModal = () => {
+    setSelectedGuest(null);
+    setModalVisible(false);
   };
 
   return (
@@ -116,7 +116,7 @@ const ModificarEventosScreen: React.FC = () => {
         />
 
         <Text style={styles.label}>Fecha</Text>
-        <TouchableOpacity onPress={handleDatePress}>
+        <TouchableOpacity onPress={() => setDatePickerVisibility(true)}>
           <TextInput
             style={styles.input}
             placeholder="DD/MM/AAAA"
@@ -126,7 +126,7 @@ const ModificarEventosScreen: React.FC = () => {
         </TouchableOpacity>
 
         <Text style={styles.label}>Hora</Text>
-        <TouchableOpacity onPress={handleTimePress}>
+        <TouchableOpacity onPress={() => setTimePickerVisibility(true)}>
           <TextInput
             style={styles.input}
             placeholder="HH:MM"
@@ -141,25 +141,32 @@ const ModificarEventosScreen: React.FC = () => {
             mode="single"
             onDismiss={() => setDatePickerVisibility(false)}
             date={date || new Date()}
-            onConfirm={onDateConfirm}
+            onConfirm={(params) => {
+              setDate(params.date);
+              setDatePickerVisibility(false);
+            }}
             locale="es"
             saveLabel="Aceptar"
             label="Selecciona la fecha"
             animationType="slide"
-            theme={{ colors: { primary: '#6200EA' } }}
           />
 
           <TimePickerModal
             visible={isTimePickerVisible}
             onDismiss={() => setTimePickerVisibility(false)}
-            onConfirm={onTimeConfirm}
+            onConfirm={(params) => {
+              const selectedTime = new Date();
+              selectedTime.setHours(params.hours);
+              selectedTime.setMinutes(params.minutes);
+              setTime(selectedTime);
+              setTimePickerVisibility(false);
+            }}
             hours={time ? time.getHours() : undefined}
             minutes={time ? time.getMinutes() : undefined}
             label="Selecciona la hora"
             cancelLabel="Cancelar"
             confirmLabel="Aceptar"
             animationType="slide"
-            theme={{ colors: { primary: '#6200EA' } }}
           />
         </Portal>
 
@@ -179,28 +186,42 @@ const ModificarEventosScreen: React.FC = () => {
           onChangeText={setObservations}
         />
 
-        <View style={styles.assistantsSection}>
-          <Text style={styles.label}>Asistentes</Text>
-          <FlatList
-            data={assistants}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.assistantContainer}>
-                <Text style={styles.assistantText}>{item}</Text>
-                <TouchableOpacity onPress={() => setAssistants(assistants.filter(a => a !== item))}>
-                  <Text style={styles.removeText}>Eliminar</Text>
+        <Text style={styles.label}>Asistentes</Text>
+        <View style={styles.assistantsContainer}>
+          {assistants.length === 0 ? (
+            <Text style={styles.emptyMessage}>Añadir invitados al evento</Text>
+          ) : (
+            <FlatList
+              data={assistants}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity onPress={() => openGuestModal(item)}>
+                  <View style={styles.assistantContainer}>
+                    <Text style={styles.assistantText}>{item.nombre}</Text>
+                    <Text style={styles.detailsText}>Detalles</Text>
+                  </View>
                 </TouchableOpacity>
-              </View>
-            )}
-          />
-          <TouchableOpacity onPress={() => navigation.navigate('InvitadoNuevo')} style={styles.addButton}>
-            <Icon name="add" size={24} color="#fff" />
-          </TouchableOpacity>
+              )}
+              style={styles.assistantsList}
+            />
+          )}
         </View>
 
-        <TouchableOpacity style={styles.createButton} onPress={handleUpdateEvent}>
-          <Text style={styles.createButtonText}>GUARDAR CAMBIOS</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('InvitadoNuevo')} style={styles.addButton}>
+          <Icon name="add" size={24} color="#fff" />
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.createButton} onPress={handleUpdateEvent}>
+          <Text style={styles.createButtonText}>ACTUALIZAR EVENTO</Text>
+        </TouchableOpacity>
+
+        <GuestDetailsModal
+          visible={isModalVisible}
+          guest={selectedGuest}
+          onClose={closeGuestModal}
+          onUpdate={(updatedGuest) => {}}
+          onDelete={(guestId) => {}}
+        />
       </View>
     </Provider>
   );
@@ -210,63 +231,54 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: '#f8f9fa',
   },
   label: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    marginVertical: 5,
   },
   input: {
-    backgroundColor: '#f4f4f4',
+    borderWidth: 1,
+    borderColor: '#ddd',
     padding: 10,
-    borderRadius: 8,
-    marginBottom: 15,
-    fontSize: 16,
+    borderRadius: 5,
+    marginBottom: 10,
+    backgroundColor: '#fff',
   },
-  assistantsSection: {
-    backgroundColor: '#f0f0f5',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
+  assistantsContainer: {
+    backgroundColor: '#f0f0f0',
+    padding: 10,
+    borderRadius: 5,
+    height: 150,
+  },
+  assistantsList: {
+    flexGrow: 0,
+  },
+  emptyMessage: {
+    color: '#888',
+    fontStyle: 'italic',
   },
   assistantContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    backgroundColor: '#e0e0e0',
     padding: 10,
-    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    marginBottom: 5,
+    backgroundColor: '#fff',
   },
   assistantText: {
     fontSize: 16,
-    color: '#333',
   },
-  removeText: {
-    color: '#ff0000',
-    fontWeight: 'bold',
+  detailsText: {
+    fontSize: 14,
+    color: '#007bff',
   },
   addButton: {
-    backgroundColor: '#6200EA',
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginTop: 10,
-  },
-  createButton: {
-    backgroundColor: '#6200EA',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  createButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
+    position: 'absolute',
+    bottom
+: 100, right: 20, backgroundColor: '#007bff', borderRadius: 50, padding: 15, }, createButton: { backgroundColor: '#28a745', padding: 15, borderRadius: 5, alignItems: 'center', marginTop: 20, }, createButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold', }, });
 
-export default ModificarEventosScreen;
+export default ModificarEventoScreen;
